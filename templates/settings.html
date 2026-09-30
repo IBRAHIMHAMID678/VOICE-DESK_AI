@@ -1,0 +1,178 @@
+{% extends "base.html" %}
+{% block title %}Settings{% endblock %}
+{% block heading %}{% if is_new %}New client{% else %}Settings{% endif %}{% endblock %}
+{% block content %}
+{% if error %}<div class="alert error">{{ error }}</div>{% endif %}
+<div class="card">
+  <h2>{% if is_new %}Add a new client{% else %}{{ business.name }}{% endif %}</h2>
+  <p class="desc">Everything the AI receptionist knows about this business lives here. Save, and it takes effect immediately — no code changes needed.</p>
+
+  <form method="post" action="/settings" id="cfg-form" onsubmit="return assembleConfig()">
+    <input type="hidden" name="business" value="{% if is_new %}new{% else %}{{ business_id }}{% endif %}">
+    <input type="hidden" name="config_json" id="config_json">
+
+    <div class="section-title">Business details</div>
+    <div class="grid cols-2">
+      <div class="field"><label>Business ID (used as the file name; lowercase, no spaces)</label>
+        <input type="text" id="f_id" {% if not is_new %}readonly{% endif %} value=""></div>
+      <div class="field"><label>Business name</label><input type="text" id="f_name" value=""></div>
+      <div class="field"><label>City</label><input type="text" id="f_city" value=""></div>
+      <div class="field"><label>Default language</label>
+        <select id="f_lang">
+          <option value="roman_urdu">Roman Urdu</option>
+          <option value="ur">Urdu (اردو script)</option>
+          <option value="en">English</option>
+        </select></div>
+      <div class="field"><label>Owner phone (for notifications, +92...)</label><input type="tel" id="f_owner" value=""></div>
+      <div class="field"><label>Voice for audio replies</label>
+        <select id="f_voice">
+          <option value="ur-PK-GulNawazNeural">Gul Nawaz - female</option>
+          <option value="ur-PK-AsadNeural">Asad - male</option>
+        </select></div>
+    </div>
+    <div class="field"><label>Location / landmark</label><input type="text" id="f_location" value=""></div>
+    <div class="field"><label>After-hours message (sent when the business is closed)</label>
+      <textarea id="f_afterhours" rows="3"></textarea></div>
+
+    <div class="section-title">Services</div>
+    <p class="desc">Each service needs a name, price (Rs), duration (minutes), and keywords the AI uses to recognise it.</p>
+    <div id="services"></div>
+    <button type="button" class="btn small" onclick="addService()">Add service</button>
+
+    <div class="section-title">Opening hours</div>
+    <div id="hours"></div>
+
+    <div class="section-title">FAQs</div>
+    <p class="desc">Common questions and the answers the AI should give.</p>
+    <div id="faqs"></div>
+    <button type="button" class="btn small" onclick="addFaq()">Add FAQ</button>
+
+    <div class="section-title">Booking rules</div>
+    <div class="grid cols-2">
+      <div class="field"><label>Slot length (minutes)</label><input type="number" id="f_slot" value="30" min="5"></div>
+      <div class="field"><label>How many days ahead can customers book</label><input type="number" id="f_advance" value="14" min="1"></div>
+    </div>
+    <div class="field checkbox-row"><input type="checkbox" id="f_req" checked>
+      <label for="f_req" style="margin:0">Require name + phone before confirming a booking</label></div>
+
+    <div style="margin-top:24px">
+      <button type="submit" class="btn primary">Save configuration</button>
+      {% if not is_new %}<a class="btn" href="/settings?business={{ business_id }}">Discard changes</a>{% endif %}
+    </div>
+  </form>
+</div>
+
+<script>
+const SEED = {{ cfg_json | safe }};
+const DAYS = ["mon","tue","wed","thu","fri","sat","sun"];
+const DAY_LABEL = {mon:"Monday",tue:"Tuesday",wed:"Wednesday",thu:"Thursday",fri:"Friday",sat:"Saturday",sun:"Sunday"};
+
+function esc(s){ return String(s ?? "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/"/g,"&quot;"); }
+
+function addService(s){
+  s = s || {name:"", price_pkr:0, duration_min:30, keywords:[]};
+  const div = document.createElement("div");
+  div.className = "svc-row";
+  div.innerHTML =
+    `<div><label>Service name</label><input type="text" class="s-name" value="${esc(s.name)}"></div>` +
+    `<div><label>Price (Rs)</label><input type="number" class="s-price" value="${s.price_pkr}" min="0"></div>` +
+    `<div><label>Minutes</label><input type="number" class="s-dur" value="${s.duration_min}" min="5"></div>` +
+    `<div><label>Keywords (comma separated)</label><input type="text" class="s-kw" value="${esc((s.keywords||[]).join(", "))}"></div>` +
+    `<div><button type="button" class="remove-btn" onclick="this.closest('.svc-row').remove()">X</button></div>`;
+  document.getElementById("services").appendChild(div);
+}
+
+function addFaq(f){
+  f = f || {q:"", a:""};
+  const div = document.createElement("div");
+  div.className = "faq-row";
+  div.innerHTML =
+    `<div><label>Question</label><input type="text" class="f-q" value="${esc(f.q)}"></div>` +
+    `<div><label>Answer</label><input type="text" class="f-a" value="${esc(f.a)}"></div>` +
+    `<div><button type="button" class="remove-btn" onclick="this.closest('.faq-row').remove()">X</button></div>`;
+  document.getElementById("faqs").appendChild(div);
+}
+
+function renderHours(hours){
+  const wrap = document.getElementById("hours");
+  wrap.innerHTML = "";
+  DAYS.forEach(d => {
+    const h = (hours && hours[d]) || "closed";
+    const closed = h === "closed";
+    const open = closed ? "10:00" : h.open, close = closed ? "18:00" : h.close;
+    const div = document.createElement("div");
+    div.className = "hours-row";
+    div.dataset.day = d;
+    div.innerHTML =
+      `<div class="day-name">${DAY_LABEL[d]}</div>` +
+      `<div><label>Open</label><input type="time" class="h-open" value="${open}" ${closed?"disabled":""}></div>` +
+      `<div><label>Close</label><input type="time" class="h-close" value="${close}" ${closed?"disabled":""}></div>` +
+      `<div class="checkbox-row"><input type="checkbox" class="h-closed" ${closed?"checked":""} onchange="toggleClosed(this)"><label style="margin:0">Closed</label></div>`;
+    wrap.appendChild(div);
+  });
+}
+function toggleClosed(cb){
+  const row = cb.closest(".hours-row");
+  row.querySelector(".h-open").disabled = cb.checked;
+  row.querySelector(".h-close").disabled = cb.checked;
+}
+
+function assembleConfig(){
+  const services = [...document.querySelectorAll(".svc-row")].map(r => ({
+    name: r.querySelector(".s-name").value.trim(),
+    price_pkr: parseInt(r.querySelector(".s-price").value || "0", 10),
+    duration_min: parseInt(r.querySelector(".s-dur").value || "30", 10),
+    keywords: r.querySelector(".s-kw").value.split(",").map(s => s.trim()).filter(Boolean)
+  }));
+  const faqs = [...document.querySelectorAll(".faq-row")].map(r => ({
+    q: r.querySelector(".f-q").value.trim(),
+    a: r.querySelector(".f-a").value.trim()
+  })).filter(f => f.q && f.a);
+  const hours = {};
+  document.querySelectorAll(".hours-row").forEach(r => {
+    const d = r.dataset.day;
+    hours[d] = r.querySelector(".h-closed").checked ? "closed"
+      : {open: r.querySelector(".h-open").value || "10:00",
+         close: r.querySelector(".h-close").value || "18:00"};
+  });
+  const cfg = {
+    id: document.getElementById("f_id").value.trim(),
+    name: document.getElementById("f_name").value.trim(),
+    city: document.getElementById("f_city").value.trim(),
+    default_language: document.getElementById("f_lang").value,
+    services, hours, faqs,
+    location: document.getElementById("f_location").value.trim(),
+    booking: {
+      slot_minutes: parseInt(document.getElementById("f_slot").value || "30", 10),
+      max_advance_days: parseInt(document.getElementById("f_advance").value || "14", 10),
+      require_name_phone: document.getElementById("f_req").checked
+    },
+    after_hours_message: document.getElementById("f_afterhours").value.trim(),
+    owner_phone: document.getElementById("f_owner").value.trim(),
+    tts_voice: document.getElementById("f_voice").value
+  };
+  if (!cfg.id || !cfg.name) { alert("Business ID and name are required."); return false; }
+  document.getElementById("config_json").value = JSON.stringify(cfg);
+  return true;
+}
+
+(function init(){
+  const c = SEED || {};
+  document.getElementById("f_id").value = c.id || "";
+  document.getElementById("f_name").value = c.name || "";
+  document.getElementById("f_city").value = c.city || "";
+  document.getElementById("f_lang").value = c.default_language || "roman_urdu";
+  document.getElementById("f_owner").value = c.owner_phone || "";
+  document.getElementById("f_voice").value = c.tts_voice || "ur-PK-GulNawazNeural";
+  document.getElementById("f_location").value = c.location || "";
+  document.getElementById("f_afterhours").value = c.after_hours_message || "";
+  (c.services || []).forEach(addService);
+  if (!(c.services || []).length) addService();
+  renderHours(c.hours);
+  (c.faqs || []).forEach(addFaq);
+  document.getElementById("f_slot").value = (c.booking || {}).slot_minutes || 30;
+  document.getElementById("f_advance").value = (c.booking || {}).max_advance_days || 14;
+  document.getElementById("f_req").checked = (c.booking || {}).require_name_phone !== false;
+})();
+</script>
+{% endblock %}

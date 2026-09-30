@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}Conversations{% endblock %}
+{% block heading %}Conversations{% endblock %}
+{% block content %}
+<div class="card">
+  <h2>{{ business.name }}</h2>
+  <p class="desc">{{ conversations|length }} conversation(s) on record. Click a row to open the full transcript.</p>
+  <table>
+    <thead>
+      <tr><th>Customer</th><th>Last message</th><th>Messages</th><th>Updated</th></tr>
+    </thead>
+    <tbody>
+      {% for c in conversations %}
+      <tr>
+        <td><a class="rowlink" href="/conversations/{{ c.id }}?business={{ business_id }}"><strong>{{ c.customer_name or c.customer_phone }}</strong><br><span class="muted small">{{ c.customer_phone }}</span></a></td>
+        <td><a class="rowlink" href="/conversations/{{ c.id }}?business={{ business_id }}">{{ (c.last_msg or "-")[:90] }}</a></td>
+        <td>{{ c.msg_count }}</td>
+        <td class="muted small">{{ c.updated_at }}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="4" class="muted">No conversations yet. They appear here once customers message the WhatsApp number.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

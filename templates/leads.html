@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block title %}Leads{% endblock %}
+{% block heading %}Lead inbox{% endblock %}
+{% block content %}
+<div class="card">
+  <h2>{{ business.name }}</h2>
+  <p class="desc">Phone numbers captured from conversations. Update the status as you work them.</p>
+  <p>
+    <a class="btn small {% if not filter_status %}primary{% endif %}" href="/leads?business={{ business_id }}">All</a>
+    {% for s in ["new", "contacted", "booked", "closed"] %}
+    <a class="btn small {% if filter_status == s %}primary{% endif %}" href="/leads?business={{ business_id }}&status={{ s }}">{{ s|capitalize }}</a>
+    {% endfor %}
+  </p>
+  <table>
+    <thead>
+      <tr><th>Name</th><th>Phone</th><th>Need</th><th>Status</th><th>Captured</th><th></th></tr>
+    </thead>
+    <tbody>
+      {% for l in leads %}
+      <tr>
+        <td><strong>{{ l.name or "-" }}</strong></td>
+        <td>{{ l.phone }}</td>
+        <td>{{ (l.need or "-")[:80] }}</td>
+        <td><span class="badge {{ l.status }}">{{ l.status }}</span></td>
+        <td class="muted small">{{ l.created_at }}</td>
+        <td>
+          <form class="inline-form" method="post" action="/api/leads/{{ l.id }}/status">
+            <select name="status" onchange="this.form.submit()" style="width:auto">
+              {% for s in ["new", "contacted", "booked", "closed"] %}
+              <option value="{{ s }}" {% if l.status == s %}selected{% endif %}>{{ s|capitalize }}</option>
+              {% endfor %}
+            </select>
+          </form>
+        </td>
+      </tr>
+      {% else %}
+      <tr><td colspan="6" class="muted">No leads yet. Numbers shared by customers in chat are captured here automatically.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

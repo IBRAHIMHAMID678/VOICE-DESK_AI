@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+{% block title %}Bookings{% endblock %}
+{% block heading %}Bookings{% endblock %}
+{% block content %}
+<div class="card">
+  <h2>Owner daily summary</h2>
+  <p class="desc">A WhatsApp-ready summary of the day's conversations, bookings and leads. Copy it and send it to the owner.</p>
+  <div style="display:flex;gap:10px;align-items:end;margin-bottom:12px;flex-wrap:wrap">
+    <div class="field" style="margin:0"><label>Date</label><input type="date" id="sum-date" value="{{ today }}" style="width:auto"></div>
+    <button class="btn" type="button" onclick="loadSummary()">Load summary</button>
+    <button class="btn primary" type="button" onclick="copySummary()">Copy text</button>
+  </div>
+  <textarea id="summary-text" rows="9" readonly placeholder="Click 'Load summary'..."></textarea>
+</div>
+<script>
+async function loadSummary(){
+  const d = document.getElementById("sum-date").value;
+  const r = await fetch(`/api/daily-summary?business={{ business_id }}&date=${d}`);
+  document.getElementById("summary-text").value = await r.text();
+}
+async function copySummary(){
+  const t = document.getElementById("summary-text");
+  if(!t.value) await loadSummary();
+  t.select();
+  try { await navigator.clipboard.writeText(t.value); }
+  catch(e){ document.execCommand("copy"); }
+}
+loadSummary();
+</script>
+
+<div class="card">
+  <h2>Week view</h2>
+  <p class="desc">All bookings for {{ business.name }}. Week starts Monday.</p>
+  <div class="week-nav">
+    <a class="btn small" href="/bookings?business={{ business_id }}&week={{ prev_week }}">Previous</a>
+    <span class="title">{{ week_start.strftime("%d %b %Y") }} - {{ week_days[6].strftime("%d %b %Y") }}</span>
+    <a class="btn small" href="/bookings?business={{ business_id }}&week={{ next_week }}">Next</a>
+  </div>
+  <div class="week-grid">
+    {% for d in week_days %}
+    <div class="day-col {% if d.isoformat() == today %}today{% endif %}">
+      <div class="day-head">{{ d.strftime("%a %d %b") }}</div>
+      {% for b in week_bookings[d.isoformat()] %}
+      <div class="slot-chip {{ b.status }}">
+        <div class="t">{{ b.start[11:16] }} - {{ b.end[11:16] }}</div>
+        <div>{{ b.customer_name or b.customer_phone }}</div>
+        <div class="muted small">{{ b.service or "" }}</div>
+        <div style="margin-top:6px"><span class="badge {{ b.status }}">{{ b.status }}</span></div>
+      </div>
+      {% else %}
+      <div class="muted small">No bookings</div>
+      {% endfor %}
+    </div>
+    {% endfor %}
+  </div>
+</div>
+
+<div class="card">
+  <h2>Upcoming bookings</h2>
+  <p class="desc">Pending and confirmed bookings from now on.</p>
+  <table>
+    <thead>
+      <tr><th>When</th><th>Customer</th><th>Service</th><th>Status</th><th></th></tr>
+    </thead>
+    <tbody>
+      {% for b in upcoming %}
+      <tr>
+        <td><strong>{{ b.start[:16].replace("T", " ") }}</strong><br><span class="muted small">until {{ b.end[11:16] }}</span></td>
+        <td>{{ b.customer_name or "-" }}<br><span class="muted small">{{ b.customer_phone }}</span></td>
+        <td>{{ b.service or "-" }}</td>
+        <td><span class="badge {{ b.status }}">{{ b.status }}</span></td>
+        <td>
+          <form class="inline-form" method="post" action="/api/bookings/{{ b.id }}/status">
+            {% if b.status == "pending" %}<button class="btn small primary" name="status" value="confirmed">Confirm</button>{% endif %}
+            {% if b.status != "cancelled" %}<button class="btn small danger" name="status" value="cancelled">Cancel</button>{% endif %}
+          </form>
+        </td>
+      </tr>
+      {% else %}
+      <tr><td colspan="5" class="muted">No upcoming bookings.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

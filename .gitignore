@@ -1,0 +1,12 @@
+.env
+__pycache__/
+*.pyc
+*.pyo
+*.db
+*.db-journal
+data/
+.venv/
+venv/
+*.mp3
+*.wav
+.pytest_cache/

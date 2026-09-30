@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block title %}Analytics{% endblock %}
+{% block heading %}Analytics{% endblock %}
+{% block content %}
+<div class="grid cols-4">
+  <div class="card stat"><div class="label">Conversations</div><div class="value">{{ total_conversations }}</div><div class="hint">all time</div></div>
+  <div class="card stat"><div class="label">Bookings made</div><div class="value">{{ total_bookings }}</div><div class="hint">excluding cancelled</div></div>
+  <div class="card stat"><div class="label">Leads captured</div><div class="value">{{ total_leads }}</div><div class="hint">all time</div></div>
+  <div class="card stat"><div class="label">API calls saved</div><div class="value">{{ tts_cache.files + transcript_cache.rows }}</div><div class="hint">cache hits avoid repeat calls</div></div>
+</div>
+
+<div class="card">
+  <h2>Bookings by day</h2>
+  <p class="desc">Last 7 days for {{ business.name }}.</p>
+  <svg viewBox="0 0 700 200" width="100%" height="200" role="img" aria-label="Bookings per day">
+    {% for p in per_day %}
+    {% set x = 40 + loop.index0 * 95 %}
+    {% set h = (p.bookings / max_n * 130) if max_n else 0 %}
+    <rect x="{{ x }}" y="{{ 150 - h }}" width="52" height="{{ h }}" rx="6" fill="#0f766e" opacity="0.9"/>
+    <text x="{{ x + 26 }}" y="{{ 140 - h }}" text-anchor="middle" font-size="12" font-weight="700" fill="#1f2937">{{ p.bookings }}</text>
+    <text x="{{ x + 26 }}" y="172" text-anchor="middle" font-size="12" fill="#6b7280">{{ p.day }}</text>
+    {% endfor %}
+    <line x1="20" y1="150" x2="690" y2="150" stroke="#e5e7eb"/>
+  </svg>
+</div>
+
+<div class="grid cols-2">
+  <div class="card">
+    <h2>Conversations by day</h2>
+    <p class="desc">Last 7 days.</p>
+    <table>
+      <thead><tr><th>Day</th><th>Conversations</th></tr></thead>
+      <tbody>
+        {% for p in per_day %}
+        <tr><td>{{ p.day }}</td><td>{{ p.conversations }}</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <div class="card">
+    <h2>Frugality caches</h2>
+    <p class="desc">Repeat API calls avoided by caching.</p>
+    <table>
+      <tbody>
+        <tr><td>TTS clips cached</td><td><strong>{{ tts_cache.files }}</strong></td></tr>
+        <tr><td>TTS cache size</td><td><strong>{{ (tts_cache.bytes / 1024) | round(1) }} KB</strong> of {{ (tts_cache.max_bytes / 1048576) | round(0) }} MB cap</td></tr>
+        <tr><td>Transcripts cached</td><td><strong>{{ transcript_cache.rows }}</strong></td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

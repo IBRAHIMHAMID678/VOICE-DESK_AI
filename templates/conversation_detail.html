@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block title %}Conversation{% endblock %}
+{% block heading %}Conversation{% endblock %}
+{% block content %}
+<div class="card">
+  <h2>{{ conv.customer_name or conv.customer_phone }}</h2>
+  <p class="desc">{{ conv.customer_phone }} &middot; started {{ conv.created_at }}{% if conv.lang %} &middot; language: {{ conv.lang }}{% endif %}{% if pending %} &middot; <span class="badge pending">pending action</span>{% endif %}</p>
+  <div class="thread">
+    {% for m in messages %}
+    <div class="msg {{ m.direction }}">
+      <div class="kind">{{ m.kind }} &middot; {{ "customer" if m.direction == "in" else "receptionist" }}</div>
+      <div>{{ m.body }}</div>
+      <div class="meta">{{ m.created_at }}{% if m.lang %} &middot; {{ m.lang }}{% endif %}</div>
+    </div>
+    {% else %}
+    <p class="muted">No messages yet.</p>
+    {% endfor %}
+  </div>
+</div>
+<p><a class="btn" href="/conversations?business={{ business_id }}">Back to conversations</a></p>
+{% endblock %}

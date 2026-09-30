@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block title %}Dashboard{% endblock %} - Voice Receptionist</title>
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<div class="layout">
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="name">Voice Receptionist</div>
+      <div class="sub">AI front desk for local business</div>
+    </div>
+    <nav class="nav">
+      <a href="/conversations?business={{ business_id }}" class="{% if page == 'conversations' %}active{% endif %}"><span class="dot"></span>Conversations</a>
+      <a href="/bookings?business={{ business_id }}" class="{% if page == 'bookings' %}active{% endif %}"><span class="dot"></span>Bookings</a>
+      <a href="/leads?business={{ business_id }}" class="{% if page == 'leads' %}active{% endif %}"><span class="dot"></span>Leads</a>
+      <a href="/analytics?business={{ business_id }}" class="{% if page == 'analytics' %}active{% endif %}"><span class="dot"></span>Analytics</a>
+      <a href="/settings?business={{ business_id }}" class="{% if page == 'settings' %}active{% endif %}"><span class="dot"></span>Settings</a>
+    </nav>
+    <div class="foot">Runs on Groq free tier.<br>WhatsApp Cloud API.</div>
+  </aside>
+  <div class="main">
+    <div class="topbar">
+      <h1>{% block heading %}Dashboard{% endblock %}</h1>
+      <div class="spacer"></div>
+      <form method="get" action="{{ request.url.path }}" class="inline-form">
+        <select name="business" onchange="this.form.submit()" style="width:auto;min-width:220px">
+          {% for bid, cfg in businesses.items() %}
+          <option value="{{ bid }}" {% if bid == business_id %}selected{% endif %}>{{ cfg.name }} - {{ cfg.city }}</option>
+          {% endfor %}
+        </select>
+      </form>
+      <a class="btn" href="/settings?business=new">New client</a>
+    </div>
+    <div class="content">
+      {% block content %}{% endblock %}
+    </div>
+  </div>
+</div>
+</body>
+</html>
