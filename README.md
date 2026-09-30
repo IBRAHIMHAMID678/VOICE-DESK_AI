@@ -9,6 +9,12 @@ non-technical owner can actually use.
 Built for the Groq free tier: Whisper `whisper-large-v3-turbo` for speech,
 `openai/gpt-oss-120b` for chat, `edge-tts` for Urdu voice replies.
 
+## Screenshots
+
+| Dashboard — conversations | Bookings — week view & owner summary | Settings — client config editor |
+|---|---|---|
+| ![Dashboard](docs/screenshots/dashboard.png) | ![Bookings](docs/screenshots/bookings.png) | ![Settings](docs/screenshots/settings.png) |
+
 ## Architecture
 
 ```
