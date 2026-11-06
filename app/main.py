@@ -31,11 +31,23 @@ from app import config as config_mod
 from app import db as dbmod
 from app import leads as leads_mod
 from app import whatsapp
+from app import demo_routes
 from app.engine import Engine
 
 log = logging.getLogger("voice-receptionist")
 
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+# Auto-load .env
+_env_file = BASE_DIR / ".env"
+if _env_file.exists():
+    for _line in _env_file.read_text(encoding="utf-8").splitlines():
+        _line = _line.strip()
+        if _line and not _line.startswith("#") and "=" in _line:
+            _k, _v = _line.split("=", 1)
+            if _k.strip() not in os.environ:
+                os.environ[_k.strip()] = _v.strip()
+
 BUSINESSES_DIR = BASE_DIR / "businesses"
 TEMPLATES_DIR = BASE_DIR / "templates"
 STATIC_DIR = BASE_DIR / "static"
@@ -55,6 +67,7 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="Voice Receptionist", lifespan=lifespan)
+app.include_router(demo_routes.router)
 app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
 

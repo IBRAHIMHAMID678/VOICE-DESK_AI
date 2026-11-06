@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Live Voice AI Receptionist — Pakistani Urdu Clone</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Noto+Nastaliq+Urdu:wght@500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/live_demo.css?v=3.0">
+</head>
+<body>
+  <div class="app-shell">
+    <!-- Top Header -->
+    <header class="top-bar">
+      <div class="brand">
+        <div class="brand-logo">
+          <span class="pulse-dot"></span>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg>
+        </div>
+        <div class="brand-text">
+          <h1>VoiceDesk AI</h1>
+          <span class="brand-tag">Urdu & Roman Voice Clone</span>
+        </div>
+      </div>
+      <div class="header-badges">
+        <span class="badge badge-accent">⚡ Sub-700ms Latency</span>
+        <span class="badge badge-subtle">Fish Audio + Groq LPU</span>
+      </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="main-content">
+      
+      <!-- SCREEN 1: Business Setup -->
+      <section id="screen-setup" class="screen-card active">
+        <div class="screen-header">
+          <div class="step-chip">Step 1 of 3</div>
+          <h2>Configure Your Receptionist</h2>
+          <p class="subtitle">Select a preset or enter your business details. The AI uses this to answer caller questions.</p>
+        </div>
+
+        <!-- Presets Carousel -->
+        <div class="presets-row">
+          <button type="button" class="preset-btn active" data-preset="dental">
+            <span class="preset-icon">🦷</span>
+            <span class="preset-title">Dental Clinic</span>
+          </button>
+          <button type="button" class="preset-btn" data-preset="restaurant">
+            <span class="preset-icon">🍔</span>
+            <span class="preset-title">Burger / Cafe</span>
+          </button>
+          <button type="button" class="preset-btn" data-preset="salon">
+            <span class="preset-icon">💇‍♀️</span>
+            <span class="preset-title">Salon & Spa</span>
+          </button>
+          <button type="button" class="preset-btn" data-preset="realestate">
+            <span class="preset-icon">🏠</span>
+            <span class="preset-title">Real Estate</span>
+          </button>
+        </div>
+
+        <form id="setup-form" class="flow-form">
+          <div class="input-grid">
+            <div class="form-group">
+              <label for="biz-name">Business Name</label>
+              <input type="text" id="biz-name" required value="SmileCare Dental Clinic" placeholder="e.g. Dr. Bilal Dental Care">
+            </div>
+            <div class="form-group">
+              <label for="biz-category">Category</label>
+              <input type="text" id="biz-category" required value="Dental & Aesthetics" placeholder="e.g. Healthcare, Food, Beauty">
+            </div>
+          </div>
+
+          <div class="input-grid">
+            <div class="form-group">
+              <label for="biz-location">City / Location</label>
+              <input type="text" id="biz-location" required value="Gulberg III, Lahore" placeholder="e.g. F-7 Markaz, Islamabad">
+            </div>
+            <div class="form-group">
+              <label for="biz-hours">Operating Hours</label>
+              <input type="text" id="biz-hours" required value="11:00 AM se 9:00 PM (Monday - Saturday)" placeholder="e.g. 12 PM to 11 PM">
+            </div>
+          </div>
+
+          <!-- Services Table -->
+          <div class="services-section">
+            <div class="section-row">
+              <label>Services & Pricing (PKR)</label>
+              <button type="button" id="btn-add-service" class="btn-text">+ Add Service</button>
+            </div>
+            <div id="services-list" class="services-list">
+              <!-- Dynamically populated -->
+            </div>
+          </div>
+
+          <div class="form-actions">
+            <button type="button" id="btn-to-voice" class="btn-primary">
+              <span>Next: Record Voice Sample</span>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 18 6-6-6-6"/></svg>
+            </button>
+          </div>
+        </form>
+      </section>
+
+
+      <!-- SCREEN 2: 30-Second Voice Recorder -->
+      <section id="screen-voice" class="screen-card">
+        <div class="screen-header">
+          <div class="step-chip">Step 2 of 3</div>
+          <h2>Clone Your Receptionist Voice</h2>
+          <p class="subtitle">Record 15–30 seconds of speech. Our zero-shot cloning engine will clone this exact voice for the live call.</p>
+        </div>
+
+        <!-- Script Prompt Card -->
+        <div class="script-card">
+          <div class="script-card-header">
+            <span class="badge badge-accent">Read this sample script</span>
+            <span class="lang-switch">Roman Urdu / Urdu</span>
+          </div>
+          <div class="script-text">
+            "Salam! Hamari clinic Lahore mein hai. Hum checkups, scaling aur teeth whitening provide karte hain. Timing subah gyarah se raat nau baje tak hai. Aap kis time appointment book karna chahenge?"
+          </div>
+          <div class="script-urdu-sub">
+            سلام! ہماری کلینک لاہور میں واقع ہے۔ ہم چیک اپ اور اسکیلنگ کی خدمات فراہم کرتے ہیں۔
+          </div>
+        </div>
+
+        <!-- Visualizer & Recorder -->
+        <div class="record-console">
+          <div class="waveform-box">
+            <canvas id="waveform-canvas" width="400" height="80"></canvas>
+            <div id="timer-display" class="timer-display">00:00 / 00:30</div>
+          </div>
+
+          <div class="record-controls">
+            <button type="button" id="btn-record" class="record-btn">
+              <span class="record-icon"></span>
+              <span class="record-label">Tap to Record Voice</span>
+            </button>
+            <button type="button" id="btn-stop-record" class="stop-btn" style="display:none;">
+              <span class="stop-icon"></span>
+              <span>Stop & Save Audio</span>
+            </button>
+          </div>
+
+          <!-- Playback Review -->
+          <div id="playback-preview" class="playback-box" style="display:none;">
+            <audio id="recorded-audio" controls></audio>
+            <button type="button" id="btn-re-record" class="btn-ghost">Re-record</button>
+          </div>
+        </div>
+
+        <div class="form-actions split">
+          <button type="button" id="btn-back-setup" class="btn-secondary">Back</button>
+          <button type="button" id="btn-launch-call" class="btn-primary glow">
+            <span>Launch Live Call Demo</span>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+          </button>
+        </div>
+      </section>
+
+
+      <!-- SCREEN 3: Active Live Phone Call Room -->
+      <section id="screen-call" class="screen-card call-screen">
+        <div class="call-top">
+          <div class="call-status-pill">
+            <span class="call-live-indicator"></span>
+            <span id="call-timer-text">Calling...</span>
+          </div>
+          <div class="call-mode-badge" id="call-voice-mode">
+            Cloned Voice Active
+          </div>
+        </div>
+
+        <!-- Phone Center Avatar -->
+        <div class="call-avatar-zone">
+          <div class="radial-ripple ripple-1"></div>
+          <div class="radial-ripple ripple-2"></div>
+          <div class="call-avatar" id="avatar-pulse">
+            <span class="avatar-initials" id="avatar-text">SC</span>
+          </div>
+          <div class="call-identity">
+            <h3 id="call-biz-title">SmileCare Dental</h3>
+            <p id="call-sub-status">Ayesha (Receptionist)</p>
+          </div>
+        </div>
+
+        <!-- Live Status Bar -->
+        <div class="speech-status-bar" aria-live="polite">
+          <div class="status-indicator-dot" id="agent-state-dot"></div>
+          <span id="agent-state-text">Connecting to receptionist...</span>
+          <div class="mini-equalizer" id="mini-equalizer" aria-hidden="true">
+            <span></span><span></span><span></span>
+          </div>
+        </div>
+
+        <!-- Rolling Live Transcript -->
+        <div class="transcript-feed" id="transcript-feed" role="log" aria-label="Live conversation transcript">
+          <div class="transcript-msg agent" data-role="agent" data-text="Connecting...">
+            <div class="msg-header-row">
+              <span class="speaker-tag">Ayesha (Receptionist)</span>
+              <span class="urdu-badge">اردو • Lahori Warmth</span>
+            </div>
+            <p>Connecting to front desk...</p>
+          </div>
+        </div>
+
+        <!-- Call Actions Bar -->
+        <div class="call-dock" role="toolbar" aria-label="Call controls">
+          <button type="button" id="btn-mic-toggle" class="dock-btn mic-btn active" title="Mute/Unmute Microphone" aria-label="Toggle microphone mute">
+            <svg class="icon-mic" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg>
+            <span class="dock-btn-label">Mic On</span>
+          </button>
+
+          <button type="button" id="btn-interrupt" class="dock-btn interrupt-btn" title="Tap to interrupt receptionist (Barge-In)" aria-label="Interrupt receptionist speaking">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
+            <span>Interrupt</span>
+          </button>
+
+          <button type="button" id="btn-end-call" class="dock-btn end-btn" title="End Call Session" aria-label="End call">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="m3.58 13.91 3.5-3.5a1.5 1.5 0 0 1 2.12 0l2.3 2.3a14.8 14.8 0 0 0 3.5-2.2 14.8 14.8 0 0 0 2.2-3.5l-2.3-2.3a1.5 1.5 0 0 1 0-2.12l3.5-3.5a1.5 1.5 0 0 1 2.12 0l2.83 2.83a3.5 3.5 0 0 1 0 4.95A23.7 23.7 0 0 1 12 21.41a23.7 23.7 0 0 1-11.25-11.25 3.5 3.5 0 0 1 0-4.95l2.83-2.83a1.5 1.5 0 0 1 2.12 0Z"/></svg>
+            <span class="dock-btn-label">End</span>
+          </button>
+        </div>
+
+        <!-- Quick Questions Assist (for quick test clicks) -->
+        <div class="test-prompts-bar">
+          <span class="prompt-hint">Tap to ask quickly:</span>
+          <div class="prompts-scroll">
+            <button type="button" class="quick-chip" data-query="Kal shaam 5 baje appointment mil sakti hai?">"Kal 5 baje appointment?"</button>
+            <button type="button" class="quick-chip" data-query="Teeth scaling ke kitne charges hain?">"Charges kitne hain?"</button>
+            <button type="button" class="quick-chip" data-query="Clinic ki timing kya hai?">"Timing kya hai?"</button>
+            <button type="button" class="quick-chip" data-query="Thora discount ho sake ga?">"Discount mile ga?"</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- SCREEN 4: Post-Call Success & Export -->
+      <section id="screen-export" class="screen-card">
+        <div class="screen-header text-center">
+          <div class="success-icon">🎉</div>
+          <h2>Live Call Completed!</h2>
+          <p class="subtitle">Your custom AI receptionist is ready to answer customer calls and WhatsApp voice notes 24/7.</p>
+        </div>
+
+        <div class="export-box">
+          <div class="export-metric-grid">
+            <div class="metric-card">
+              <span class="metric-num">~540ms</span>
+              <span class="metric-label">Voice Latency</span>
+            </div>
+            <div class="metric-card">
+              <span class="metric-num">Urdu / Roman</span>
+              <span class="metric-label">Bilingual AI</span>
+            </div>
+            <div class="metric-card">
+              <span class="metric-num">100% Free</span>
+              <span class="metric-label">Tier Inference</span>
+            </div>
+          </div>
+
+          <div class="whatsapp-card">
+            <div class="wa-icon">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.301-.15-1.78-.878-2.056-.978-.276-.101-.477-.15-.678.15-.2.301-.777.978-.953 1.18-.175.201-.351.226-.652.075-1.92-1.002-3.176-1.786-4.444-3.957-.333-.57.333-.528.954-1.77.1-.2.05-.376-.025-.526-.075-.15-.678-1.631-.929-2.235-.245-.589-.494-.509-.678-.519l-.578-.01c-.2 0-.527.075-.803.376s-1.054 1.03-1.054 2.51 1.08 2.912 1.23 3.113c.15.201 2.124 3.244 5.146 4.55.719.31 1.28.496 1.718.636.721.23 1.377.198 1.896.12.578-.088 1.78-.727 2.031-1.43.25-.704.25-1.306.175-1.431-.075-.125-.276-.201-.577-.351z"/></svg>
+            </div>
+            <div class="wa-text">
+              <h4>Ready to Deploy to WhatsApp?</h4>
+              <p>Export this configuration straight to your live WhatsApp Business number.</p>
+            </div>
+            <button type="button" id="btn-export-wa" class="btn-wa">Export Config</button>
+          </div>
+        </div>
+
+        <div class="form-actions text-center">
+          <button type="button" id="btn-call-again" class="btn-primary">Call Again</button>
+          <a href="/dashboard" class="btn-secondary">Open Main Dashboard</a>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <script src="/static/live_demo.js?v=3.0"></script>
+</body>
+</html>
+
