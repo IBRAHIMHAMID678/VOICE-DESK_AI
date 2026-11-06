@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Any
 
 ALLOWED_LANGUAGES = {"ur", "roman_urdu", "en"}
-ALLOWED_VOICES = {"ur-PK-GulNawazNeural", "ur-PK-AsadNeural"}
+ALLOWED_VOICES = {"ur-PK-GulNawazNeural", "ur-PK-AsadNeural", "ur-PK-UzmaNeural"}
 WEEKDAYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"]
 
 
