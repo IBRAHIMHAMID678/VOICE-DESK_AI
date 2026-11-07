@@ -2,8 +2,9 @@
 
 Features:
 - Groq Whisper-Large-V3-Turbo ground-truth reference audio transcription (guaranteeing 100% accurate phonetic alignment for voice cloning without foreign accent)
-- Fish Audio Zero-Shot Voice Cloning with explicit 'language': 'ur'
-- Studio Pakistani Neural Voices via edge-tts 7.3+ (ur-PK-UzmaNeural / ur-PK-AsadNeural)
+- Phonetic script normalizer ensuring text fed to TTS engines uses native Urdu phonemes (preventing American/English pronunciation of Latin characters)
+- Fish Audio Zero-Shot Voice Cloning with explicit 'language': 'ur' and Pakistani community reference anchors
+- Native Pakistani Neural Voices via edge-tts 7.3+ (ur-PK-UzmaNeural / ur-PK-AsadNeural)
 - Ultra-resilient fallback chain ensuring audio is ALWAYS produced and never drops to text-only
 - Fast in-memory & disk audio cache
 """
@@ -14,6 +15,7 @@ import hashlib
 import io
 import logging
 import os
+import re
 from pathlib import Path
 import subprocess
 import httpx
@@ -39,6 +41,145 @@ CACHE_DIR = Path(__file__).resolve().parent.parent / "data" / "audio_cache"
 CACHE_DIR.mkdir(parents=True, exist_ok=True)
 
 _MEM_CACHE: dict[str, bytes] = {}
+
+# Common English loanwords used in Pakistani business speech mapped to Urdu phonetics
+LOANWORDS_URDU_MAP = {
+    "appointment": "اپائنٹمنٹ",
+    "appointments": "اپائنٹمنٹس",
+    "booking": "بکنگ",
+    "timing": "ٹائمنگ",
+    "charges": "چارجز",
+    "checkup": "چیک اپ",
+    "consultation": "کنسلٹیشن",
+    "clinic": "کلینک",
+    "doctor": "ڈاکٹر",
+    "slot": "سلاٹ",
+    "confirm": "کنفرم",
+    "confirmed": "کنفرم",
+    "discount": "ڈسکاؤنٹ",
+    "service": "سروس",
+    "services": "سروسز",
+    "location": "لوکیشن",
+    "address": "ایڈریس",
+    "hospital": "ہسپتال",
+    "fee": "فیس",
+    "fees": "فیس",
+    "rs": "روپے",
+    "pkr": "روپے",
+    "am": "صبح",
+    "pm": "شام",
+}
+
+# Roman Urdu to native Urdu script dictionary for phonetically accurate TTS synthesis
+ROMAN_TO_URDU_LEXICON = {
+    "salam": "سلام",
+    "assalam": "السلام",
+    "alaikum": "علیکم",
+    "assalam-o-alaikum": "السلام علیکم",
+    "walaikum": "وعلیکم",
+    "ji": "جی",
+    "haan": "ہاں",
+    "han": "ہاں",
+    "bilkul": "بالکل",
+    "theek": "ٹھیک",
+    "acha": "اچھا",
+    "achha": "اچھا",
+    "sahi": "صحیح",
+    "main": "میں",
+    "mein": "میں",
+    "aap": "آپ",
+    "hum": "ہم",
+    "hai": "ہے",
+    "hain": "ہیں",
+    "ho": "ہو",
+    "gaya": "گیا",
+    "gayi": "گئی",
+    "karein": "کریں",
+    "karta": "کرتا",
+    "karti": "کرتی",
+    "karte": "کرتے",
+    "hoon": "ہوں",
+    "baat": "بات",
+    "bol": "بول",
+    "raha": "رہا",
+    "rahi": "رہی",
+    "rahe": "رہے",
+    "batayein": "بتائیں",
+    "kahiye": "کہیے",
+    "kya": "کیا",
+    "madad": "مدد",
+    "chahiye": "چاہیے",
+    "sakta": "سکتا",
+    "sakti": "سکتی",
+    "sakte": "سکتے",
+    "kal": "کل",
+    "aaj": "آج",
+    "subah": "صبح",
+    "shaam": "شام",
+    "dopahar": "دوپہر",
+    "raat": "رات",
+    "baje": "بجے",
+    "tak": "تک",
+    "se": "سے",
+    "ka": "کا",
+    "ki": "کی",
+    "ke": "کے",
+    "ko": "کو",
+    "pe": "پہ",
+    "par": "پر",
+    "aur": "اور",
+    "ya": "یا",
+    "masla": "مسئلہ",
+    "nahi": "نہیں",
+    "fikar": "فکر",
+    "na": "نہ",
+    "tashreef": "تشریف",
+    "le": "لے",
+    "aayein": "آئیں",
+    "available": "اویلیبل",
+    "note": "نوٹ",
+    "update": "اپڈیٹ",
+    "management": "مینجمنٹ",
+    "pooch": "پوچھ",
+    "kar": "کر",
+    "abhi": "ابھی",
+    "baare": "بارے",
+}
+
+
+def normalize_urdu_phonetics_for_tts(text: str) -> str:
+    """Ensures text fed to TTS engines uses native Urdu phonemes and script.
+
+    If text has Latin characters, maps them to Urdu phonemes to avoid American accent.
+    """
+    if not text:
+        return ""
+
+    has_urdu = bool(re.search(r"[\u0600-\u06FF]", text))
+
+    if has_urdu:
+        # Text is in Urdu script; replace any raw English loanwords with Urdu phonetic equivalents
+        def replace_loanword(m):
+            w = m.group(0).lower()
+            return LOANWORDS_URDU_MAP.get(w, m.group(0))
+
+        return re.sub(r"\b[A-Za-z]+\b", replace_loanword, text)
+
+    # Pure Roman Urdu: map word-by-word into authentic Urdu script
+    tokens = re.findall(r"[\w\'-]+|[^\w\s]", text, re.UNICODE)
+    converted: list[str] = []
+    for tok in tokens:
+        low = tok.lower()
+        if low in LOANWORDS_URDU_MAP:
+            converted.append(LOANWORDS_URDU_MAP[low])
+        elif low in ROMAN_TO_URDU_LEXICON:
+            converted.append(ROMAN_TO_URDU_LEXICON[low])
+        elif tok.isdigit():
+            converted.append(tok)
+        else:
+            converted.append(tok)
+
+    return " ".join(converted)
 
 
 def sanitize_audio_to_mp3(raw_bytes: bytes) -> bytes:
@@ -123,9 +264,12 @@ async def synthesize_speech(
     if not text:
         return b""
 
+    # Phonetically normalize to Urdu script to eliminate American accent
+    tts_text = normalize_urdu_phonetics_for_tts(text)
+
     # Cache check
     ref_sig = str(len(reference_audio_bytes)) if reference_audio_bytes else fallback_voice
-    cache_key = _get_cache_key(f"{text}_{speed}", ref_sig)
+    cache_key = _get_cache_key(f"{tts_text}_{speed}", ref_sig)
 
     if cache_key in _MEM_CACHE:
         return _MEM_CACHE[cache_key]
@@ -140,11 +284,11 @@ async def synthesize_speech(
         except Exception:
             pass
 
-    # 1. If user provided a reference voice sample, use Fish Audio zero-shot cloning
+    # 1. If user provided a reference voice sample, use Fish Audio zero-shot cloning with Urdu anchor
     if reference_audio_bytes and FISH_AUDIO_API_KEY:
         try:
             audio_bytes = await _synthesize_fish_cloned(
-                text=text,
+                text=tts_text,
                 reference_audio_bytes=reference_audio_bytes,
                 reference_text=reference_text,
                 speed=speed,
@@ -158,7 +302,7 @@ async def synthesize_speech(
 
     # 2. Native Pakistani Neural voice (edge-tts 7.3+)
     try:
-        audio_bytes = await _synthesize_edge_tts(text, fallback_voice, speed=speed)
+        audio_bytes = await _synthesize_edge_tts(tts_text, fallback_voice, speed=speed)
         if audio_bytes and len(audio_bytes) > 1000:
             _MEM_CACHE[cache_key] = audio_bytes
             disk_path.write_bytes(audio_bytes)
@@ -169,7 +313,7 @@ async def synthesize_speech(
     # 3. Last-ditch Fish Audio base voice
     if FISH_AUDIO_API_KEY:
         try:
-            audio_bytes = await _synthesize_fish_base(text)
+            audio_bytes = await _synthesize_fish_base(tts_text)
             if audio_bytes and len(audio_bytes) > 1000:
                 _MEM_CACHE[cache_key] = audio_bytes
                 disk_path.write_bytes(audio_bytes)

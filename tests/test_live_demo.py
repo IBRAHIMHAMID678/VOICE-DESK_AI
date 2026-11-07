@@ -11,7 +11,7 @@ def test_demo_page_loads():
         res = client.get("/demo")
         assert res.status_code == 200
         assert "VoiceDesk AI" in res.text
-        assert "Agent Studio" in res.text
+        assert "Live Voice & Chat" in res.text
         assert "Receipts & OCR Proof" in res.text
 
 
