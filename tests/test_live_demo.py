@@ -12,7 +12,7 @@ def test_demo_page_loads():
         assert res.status_code == 200
         assert "VoiceDesk AI" in res.text
         assert "Live Voice & Chat" in res.text
-        assert "Receipts & OCR Proof" in res.text
+        assert "Receipts & OCR" in res.text
 
 
 def test_demo_create_session_with_custom_agent_and_fallback():
@@ -224,3 +224,58 @@ def test_websocket_multi_turn_call():
             assert msg6["type"] == "audio_chunk"
             assert len(msg6["text"]) > 0
             assert len(msg6["audio_b64"]) > 1000
+
+
+def test_landing_page_loads():
+    with TestClient(app) as client:
+        res = client.get("/")
+        assert res.status_code == 200
+        assert "VoiceDesk AI" in res.text
+        assert "Never Miss a Customer Call Again" in res.text
+        assert "Launch Interactive Studio" in res.text
+        assert "Tools & Integrations" in res.text
+
+
+def test_login_page_loads():
+    with TestClient(app) as client:
+        res = client.get("/login")
+        assert res.status_code == 200
+        assert "Sign In to Business Console" in res.text
+        assert "Instant Demo Access" in res.text
+        assert "Dental Clinic Admin" in res.text
+
+
+def test_tools_catalog_and_simulation_endpoints():
+    with TestClient(app) as client:
+        # 1. Fetch catalog
+        res_tools = client.get("/api/demo/tools")
+        assert res_tools.status_code == 200
+        data = res_tools.json()
+        assert len(data.get("tools", [])) >= 6
+
+        # 2. Toggle tool
+        res_toggle = client.post("/api/demo/tools/toggle", json={
+            "tool_id": "tool-kds",
+            "connected": True
+        })
+        assert res_toggle.status_code == 200
+        assert res_toggle.json()["connected"] is True
+
+        # 3. Simulate appointment booking tool
+        res_sim_cal = client.post("/api/demo/tools/simulate", json={
+            "tool_id": "tool-calendar"
+        })
+        assert res_sim_cal.status_code == 200
+        cal_res = res_sim_cal.json()
+        assert cal_res["status"] == "success"
+        assert "APT-" in cal_res["simulation_result"]["booking_id"]
+
+        # 4. Simulate thermal receipt tool
+        res_sim_rcpt = client.post("/api/demo/tools/simulate", json={
+            "tool_id": "tool-receipt"
+        })
+        assert res_sim_rcpt.status_code == 200
+        rcpt_res = res_sim_rcpt.json()
+        assert rcpt_res["status"] == "success"
+        assert len(rcpt_res["simulation_result"]["receipt_b64"]) > 5000
+

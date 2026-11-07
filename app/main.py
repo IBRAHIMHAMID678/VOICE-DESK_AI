@@ -230,9 +230,26 @@ def _fallback_text(lang: str) -> str:
 
 # ---------------------------------------------------------------- dashboard
 
-@app.get("/", include_in_schema=False)
-def index():
-    return RedirectResponse("/demo")
+@app.get("/", include_in_schema=False, response_class=HTMLResponse)
+def index(request: Request):
+    return templates.TemplateResponse(request, "landing.html", {})
+
+
+@app.get("/login", include_in_schema=False, response_class=HTMLResponse)
+def login_page(request: Request):
+    return templates.TemplateResponse(request, "login.html", {"mode": "login"})
+
+
+@app.get("/signup", include_in_schema=False, response_class=HTMLResponse)
+def signup_page(request: Request):
+    return templates.TemplateResponse(request, "login.html", {"mode": "signup"})
+
+
+@app.get("/logout", include_in_schema=False)
+def logout_endpoint():
+    res = RedirectResponse("/", status_code=303)
+    res.delete_cookie("auth_session")
+    return res
 
 
 @app.get("/dashboard", response_class=HTMLResponse)

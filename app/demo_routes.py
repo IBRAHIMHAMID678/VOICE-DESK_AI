@@ -34,12 +34,150 @@ STATIC_DIR = Path(__file__).resolve().parent.parent / "static"
 BUSINESSES_DIR = Path(__file__).resolve().parent.parent / "businesses"
 templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
 
-# In-memory session store: session_id -> {profile, reference_bytes, reference_text, history, receipts}
+# In-memory session store: session_id -> {profile, reference_bytes, reference_text, history, receipts, tools}
 SESSIONS: dict[str, dict] = {}
+
+TOOLS_CATALOG = [
+    {
+        "id": "tool-receipt",
+        "name": "Thermal Paper Receipt & Invoice Generator",
+        "category": "Billing & Proof",
+        "icon": "🧾",
+        "badge": "Active Core",
+        "description": "Automatically computes 5% GST, itemizes PKR charges, and renders downloadable physical thermal paper receipts with barcode verification.",
+        "connected": True,
+        "parameters": ["business_name", "items", "gst_rate", "stamp_type"],
+        "sample_output": {
+            "status": "GENERATED",
+            "receipt_no": "REC-94182",
+            "format": "PNG (460x680 thermal)",
+            "verification": "BARCODE_STAMPED",
+            "items_count": 2,
+            "total_pkr": 5775
+        }
+    },
+    {
+        "id": "tool-ocr",
+        "name": "Multimodal OCR Document Inspector",
+        "category": "Vision & Verification",
+        "icon": "🔍",
+        "badge": "Active Core",
+        "description": "Scans customer payment slips, clinic prescriptions, and handwritten invoices, extracting structured line items and payment totals.",
+        "connected": True,
+        "parameters": ["image_bytes", "extraction_schema"],
+        "sample_output": {
+            "status": "VERIFIED",
+            "extracted_items": 2,
+            "total_pkr": 5500,
+            "confidence": 0.98,
+            "schema_valid": True
+        }
+    },
+    {
+        "id": "tool-calendar",
+        "name": "Smart Slot & Appointment Booking",
+        "category": "Scheduling",
+        "icon": "📅",
+        "badge": "Demo Connected",
+        "description": "Synchronizes doctor, salon, and consultant slots in real time. Automatically checks conflicting intervals and reserves slots.",
+        "connected": True,
+        "parameters": ["date", "time_slot", "service_id", "patient_name"],
+        "sample_output": {
+            "booking_id": "APT-4421",
+            "slot": "Tomorrow, 5:00 PM",
+            "doctor": "Dr. Bilal (Dental Specialist)",
+            "calendar_sync": "SYNCED_MOCK",
+            "sms_reminder_queued": True
+        }
+    },
+    {
+        "id": "tool-crm",
+        "name": "Customer CRM & Lead Profiler",
+        "category": "Sales & CRM",
+        "icon": "👥",
+        "badge": "Demo Connected",
+        "description": "Captures caller phone number, name, inquiry interest, classifies lead urgency (Hot/Warm/Cold), and stores interaction timeline.",
+        "connected": True,
+        "parameters": ["caller_phone", "lead_sentiment", "intent", "notes"],
+        "sample_output": {
+            "lead_id": "LEAD-8832",
+            "customer_name": "Usman Malik",
+            "phone": "0300-8849123",
+            "status": "HOT_LEAD",
+            "interest": "Laser Teeth Whitening Consultation",
+            "priority": "HIGH"
+        }
+    },
+    {
+        "id": "tool-kds",
+        "name": "Kitchen Display & Order Dispatch (KDS)",
+        "category": "Restaurant & Retail",
+        "icon": "🍳",
+        "badge": "Demo Ready",
+        "description": "Routes itemized food orders directly to kitchen preparation queues with prep time estimates and pickup token numbers.",
+        "connected": False,
+        "parameters": ["table_or_delivery", "line_items", "special_instructions"],
+        "sample_output": {
+            "order_token": "TKN-419",
+            "prep_time_est": "18 mins",
+            "kds_queue": "STATION_GRILL_1",
+            "items_queued": ["Chicken Karahi (Half)", "Roghni Naan x4"]
+        }
+    },
+    {
+        "id": "tool-whatsapp",
+        "name": "WhatsApp & SMS Auto-Dispatcher",
+        "category": "Messaging",
+        "icon": "💬",
+        "badge": "Demo Connected",
+        "description": "Dispatches instant WhatsApp confirmation messages with digital receipt PDFs and Google Maps location pins upon call hangup.",
+        "connected": True,
+        "parameters": ["recipient_number", "template", "media_url"],
+        "sample_output": {
+            "message_status": "QUEUED_DISPATCH",
+            "channel": "WhatsApp Business Cloud API (Simulation)",
+            "recipient": "+92 300 1234567",
+            "payload": "Appointment Confirmed with MM Alam Road Pin"
+        }
+    },
+    {
+        "id": "tool-kb",
+        "name": "Semantic Knowledge Base & Policy Engine",
+        "category": "Knowledge",
+        "icon": "📚",
+        "badge": "Demo Ready",
+        "description": "Answers complex caller questions about parking, doctor qualifications, insurance panels, and refund guidelines via semantic search.",
+        "connected": False,
+        "parameters": ["query_vector", "confidence_threshold"],
+        "sample_output": {
+            "query": "Parking kahan hai?",
+            "matched_clause": "Clause 4.2: Free underground valet parking available for clinic visitors",
+            "source_doc": "Clinic_Operations_Manual_v2.pdf",
+            "relevance": "97.4%"
+        }
+    },
+    {
+        "id": "tool-escalation",
+        "name": "Emergency & Supervisor Escalation",
+        "category": "Support",
+        "icon": "🚨",
+        "badge": "Demo Ready",
+        "description": "Detects customer distress, VIP client accounts, or medical urgency and triggers an instant SMS alert or live transfer to management.",
+        "connected": False,
+        "parameters": ["trigger_sentiment", "supervisor_phone"],
+        "sample_output": {
+            "escalation_id": "ESC-102",
+            "priority": "HIGH",
+            "reason": "Emergency dental toothache reported",
+            "alert_sent_to": "+92 321 9998877 (Clinic Medical Director)",
+            "status": "DISPATCHED"
+        }
+    }
+]
 
 
 @router.get("/demo", response_class=HTMLResponse)
-@router.get("/", response_class=HTMLResponse)
+@router.get("/app", response_class=HTMLResponse)
 async def demo_page(request: Request):
     """Render the dedicated Voice Agent Studio platform page."""
     return templates.TemplateResponse(request, "live_demo.html", {})
@@ -392,3 +530,196 @@ async def get_sample_receipt():
     }
     raw_png = receipt_service.generate_physical_receipt_image(sample)
     return Response(content=raw_png, media_type="image/png")
+
+
+@router.get("/api/demo/tools")
+async def get_tools_endpoint(session_id: str | None = None):
+    """Returns the list of available modular business tools and their connection states."""
+    session = SESSIONS.get(session_id) if session_id else None
+    active_tool_ids = session.get("tools", {"tool-receipt", "tool-ocr", "tool-calendar", "tool-crm", "tool-whatsapp"}) if session else {"tool-receipt", "tool-ocr", "tool-calendar", "tool-crm", "tool-whatsapp"}
+
+    tools = []
+    for t in TOOLS_CATALOG:
+        t_copy = dict(t)
+        t_copy["connected"] = t["id"] in active_tool_ids
+        tools.append(t_copy)
+    return {"status": "success", "tools": tools}
+
+
+@router.post("/api/demo/tools/toggle")
+async def toggle_tool_endpoint(request: Request):
+    """Toggle a modular business tool ON or OFF for an agent session."""
+    body = await request.json()
+    tool_id = body.get("tool_id")
+    connected = body.get("connected", True)
+    session_id = body.get("session_id")
+
+    if session_id and session_id in SESSIONS:
+        if "tools" not in SESSIONS[session_id]:
+            SESSIONS[session_id]["tools"] = {"tool-receipt", "tool-ocr", "tool-calendar", "tool-crm", "tool-whatsapp"}
+        if connected:
+            SESSIONS[session_id]["tools"].add(tool_id)
+        else:
+            SESSIONS[session_id]["tools"].discard(tool_id)
+
+    return {
+        "status": "success",
+        "tool_id": tool_id,
+        "connected": connected,
+        "message": f"Tool '{tool_id}' is now {'connected' if connected else 'disconnected'}"
+    }
+
+
+@router.post("/api/demo/tools/simulate")
+async def simulate_tool_endpoint(request: Request):
+    """Simulates an interactive tool execution demonstrating how the agent utilizes the tool."""
+    body = await request.json()
+    tool_id = body.get("tool_id", "tool-calendar")
+
+    if tool_id == "tool-receipt":
+        sample = {
+            "business_name": body.get("business_name", "SmileCare Dental Clinic"),
+            "category": "Healthcare",
+            "agent_name": "Zoya",
+            "customer_name": "Usman Khan",
+            "items": [
+                {"name": "Teeth Scaling & Polishing", "qty": 1, "price_pkr": 4000},
+                {"name": "General Dental Consultation", "qty": 1, "price_pkr": 1500}
+            ],
+            "status": "CONFIRMED"
+        }
+        png_bytes = receipt_service.generate_physical_receipt_image(sample)
+        r_b64 = base64.b64encode(png_bytes).decode("utf-8")
+        return {
+            "status": "success",
+            "tool_id": tool_id,
+            "tool_name": "Thermal Paper Receipt Generator",
+            "simulation_result": {
+                "action": "RENDER_THERMAL_RECEIPT",
+                "receipt_no": "REC-94182",
+                "items_count": 2,
+                "subtotal_pkr": 5500,
+                "gst_pkr": 275,
+                "total_pkr": 5775,
+                "status": "PRINT_READY",
+                "receipt_b64": r_b64
+            }
+        }
+
+    elif tool_id == "tool-ocr":
+        sample_text = "SMILECARE DENTAL CLINIC\nReceipt #: REC-7741\nDate: 07-Nov-2026\nTeeth Scaling: PKR 4,000\nConsultation: PKR 1,500\nTotal: PKR 5,500\nStatus: PAID"
+        extracted = await ocr_service.parse_receipt_text_to_json(sample_text)
+        return {
+            "status": "success",
+            "tool_id": tool_id,
+            "tool_name": "Multimodal OCR Document Inspector",
+            "simulation_result": {
+                "action": "OCR_EXTRACTION",
+                "source_type": "THERMAL_SCAN",
+                "extracted_data": extracted,
+                "verification_status": "VERIFIED"
+            }
+        }
+
+    elif tool_id == "tool-calendar":
+        return {
+            "status": "success",
+            "tool_id": tool_id,
+            "tool_name": "Smart Slot & Appointment Booking",
+            "simulation_result": {
+                "action": "RESERVE_APPOINTMENT_SLOT",
+                "booking_id": "APT-4421",
+                "patient_name": "Usman Khan",
+                "doctor": "Dr. Bilal (Dental Aesthetic Specialist)",
+                "reserved_slot": "Tomorrow, 5:00 PM (30 mins)",
+                "calendar_sync": "SYNCED_TO_GOOGLE_CALENDAR_MOCK",
+                "conflict_checked": "NO_CONFLICT",
+                "status": "CONFIRMED"
+            }
+        }
+
+    elif tool_id == "tool-crm":
+        return {
+            "status": "success",
+            "tool_id": tool_id,
+            "tool_name": "Customer CRM & Lead Profiler",
+            "simulation_result": {
+                "action": "CRM_LEAD_PROFILE",
+                "lead_id": "LEAD-8832",
+                "customer_name": "Usman Malik",
+                "phone": "+92 300 8849123",
+                "city": "Lahore (Gulberg)",
+                "lead_temperature": "HOT (95/100)",
+                "service_interest": "Laser Teeth Whitening Consultation",
+                "call_summary": "Caller inquired about Saturday slots and pricing. Responded with verified Rs 12,000 quote.",
+                "status": "LEAD_RECORDED"
+            }
+        }
+
+    elif tool_id == "tool-kds":
+        return {
+            "status": "success",
+            "tool_id": tool_id,
+            "tool_name": "Kitchen Display & Order Dispatch (KDS)",
+            "simulation_result": {
+                "action": "DISPATCH_TO_KITCHEN",
+                "order_token": "TKN-419",
+                "station": "STATION_GRILL_1",
+                "items": [
+                    {"name": "Special Chicken Karahi (Half)", "qty": 1, "prep_time": "15m"},
+                    {"name": "Fresh Roghni Naan", "qty": 4, "prep_time": "5m"}
+                ],
+                "total_prep_est": "18 mins",
+                "status": "DISPATCHED_TO_LINE"
+            }
+        }
+
+    elif tool_id == "tool-whatsapp":
+        return {
+            "status": "success",
+            "tool_id": tool_id,
+            "tool_name": "WhatsApp & SMS Auto-Dispatcher",
+            "simulation_result": {
+                "action": "WHATSAPP_AUTO_DISPATCH",
+                "dispatch_id": "WA-883109",
+                "channel": "WhatsApp Business Cloud API (Simulation)",
+                "recipient": "+92 300 1234567",
+                "message_body": "Assalam-o-Alaikum Usman! Your booking with SmileCare Dental Clinic is confirmed for Tomorrow at 5:00 PM. Location: MM Alam Road, Gulberg III, Lahore.",
+                "attachments": ["Thermal_Receipt_REC94182.pdf", "Clinic_Location_Pin.vcf"],
+                "delivery_status": "DELIVERED_SUCCESS"
+            }
+        }
+
+    elif tool_id == "tool-kb":
+        return {
+            "status": "success",
+            "tool_id": tool_id,
+            "tool_name": "Semantic Knowledge Base & Policy Engine",
+            "simulation_result": {
+                "action": "SEMANTIC_POLICY_SEARCH",
+                "query": "Parking kahan hai aur discount policy kya hai?",
+                "matched_clause": "Clause 4.2: Free underground valet parking available for clinic visitors on MM Alam Road. Discounts apply exclusively to senior citizens (10%).",
+                "source_doc": "Clinic_Operations_Manual_v2.pdf",
+                "similarity_score": "97.4%",
+                "status": "GROUNDED_CLAUSE_RETRIEVED"
+            }
+        }
+
+    elif tool_id == "tool-escalation":
+        return {
+            "status": "success",
+            "tool_id": tool_id,
+            "tool_name": "Emergency & Supervisor Escalation",
+            "simulation_result": {
+                "action": "TRIGGER_SUPERVISOR_ALERT",
+                "escalation_id": "ESC-102",
+                "priority_level": "LEVEL_1_URGENT",
+                "reason": "Caller reported acute dental pain requiring emergency slot",
+                "sms_alert_sent_to": "+92 321 9998877 (Clinic Medical Director)",
+                "call_transfer_target": "Desk Ext 104 (On-duty Doctor)",
+                "status": "ALERT_DISPATCHED"
+            }
+        }
+
+    return {"status": "error", "message": f"Unknown tool ID '{tool_id}'"}
+

@@ -1086,6 +1086,143 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
+  // =========================================================================
+  // 11. Tab: Tools & Skills Marketplace (Demo Ecosystem)
+  // =========================================================================
+  const toolsGridCards = document.getElementById("tools-grid-cards");
+  const toolSimModal = document.getElementById("tool-sim-modal");
+  const simToolIcon = document.getElementById("sim-tool-icon");
+  const simToolTitle = document.getElementById("sim-tool-title");
+  const simToolBadge = document.getElementById("sim-tool-badge");
+  const simVisualPreviewCol = document.getElementById("sim-visual-preview-col");
+  const simReceiptImg = document.getElementById("sim-receipt-img");
+  const simJsonOutput = document.getElementById("sim-json-output");
+  const btnCloseSim = document.getElementById("btn-close-sim");
+  const btnDoneSim = document.getElementById("btn-done-sim");
+
+  async function loadToolsCatalog() {
+    if (!toolsGridCards) return;
+    try {
+      const url = currentSessionId ? `/api/demo/tools?session_id=${currentSessionId}` : "/api/demo/tools";
+      const res = await fetch(url);
+      if (!res.ok) return;
+      const data = await res.json();
+      renderToolsCards(data.tools || []);
+    } catch (e) {
+      console.warn("Failed to load tools catalog:", e);
+    }
+  }
+
+  function renderToolsCards(tools) {
+    if (!toolsGridCards) return;
+    toolsGridCards.innerHTML = "";
+
+    tools.forEach(tool => {
+      const card = document.createElement("div");
+      card.className = "tool-store-card";
+      const isConnected = tool.connected;
+
+      card.innerHTML = `
+        <div class="tsc-top">
+          <span class="tsc-icon">${tool.icon || "⚙️"}</span>
+          <span class="tsc-badge ${isConnected ? 'connected' : 'disconnected'}">
+            ${isConnected ? '● Connected' : '○ Available'}
+          </span>
+        </div>
+        <div class="tsc-content">
+          <h4>${escapeHtml(tool.name)}</h4>
+          <p>${escapeHtml(tool.description)}</p>
+        </div>
+        <div class="tsc-toggle-row">
+          <span class="tsc-toggle-label">${isConnected ? 'Agent Tool: ON' : 'Agent Tool: OFF'}</span>
+          <button type="button" class="btn-xs-teal btn-toggle-tool" data-id="${tool.id}" data-connected="${isConnected}">
+            ${isConnected ? 'Disconnect' : 'Connect to Agent'}
+          </button>
+        </div>
+        <button type="button" class="btn-simulate-tool" data-id="${tool.id}" data-name="${escapeHtml(tool.name)}" data-icon="${tool.icon || '⚙️'}">
+          <span>⚡ Test Run Tool (Live Simulation)</span>
+        </button>
+      `;
+
+      card.querySelector(".btn-toggle-tool")?.addEventListener("click", async (e) => {
+        const btn = e.currentTarget;
+        const toolId = btn.dataset.id;
+        const willConnect = btn.dataset.connected !== "true";
+        btn.textContent = "Updating...";
+
+        try {
+          await fetch("/api/demo/tools/toggle", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ tool_id: toolId, connected: willConnect, session_id: currentSessionId }),
+          });
+          loadToolsCatalog();
+        } catch (err) {
+          console.error("Tool toggle error:", err);
+        }
+      });
+
+      card.querySelector(".btn-simulate-tool")?.addEventListener("click", (e) => {
+        const btn = e.currentTarget;
+        simulateToolRun(btn.dataset.id, btn.dataset.name, btn.dataset.icon);
+      });
+
+      toolsGridCards.appendChild(card);
+    });
+  }
+
+  async function simulateToolRun(toolId, toolName, toolIcon) {
+    if (!toolSimModal) return;
+
+    toolSimModal.style.display = "block";
+    simToolIcon.textContent = toolIcon || "⚙️";
+    simToolTitle.textContent = `${toolName} — Execution Output`;
+    simToolBadge.textContent = "Running Simulation...";
+    simJsonOutput.textContent = "Triggering simulated tool API and processing business payload...";
+    simVisualPreviewCol.style.display = "none";
+
+    // Scroll to modal
+    toolSimModal.scrollIntoView({ behavior: "smooth", block: "center" });
+
+    try {
+      const res = await fetch("/api/demo/tools/simulate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          tool_id: toolId,
+          business_name: inputBizName.value || "SmileCare Dental Clinic",
+          session_id: currentSessionId,
+        }),
+      });
+
+      const data = await res.json();
+      simToolBadge.textContent = "✔ Successful Simulation";
+
+      if (data.simulation_result) {
+        simJsonOutput.textContent = JSON.stringify(data.simulation_result, null, 2);
+
+        // If receipt simulation returned an image
+        if (data.simulation_result.receipt_b64) {
+          simReceiptImg.src = `data:image/png;base64,${data.simulation_result.receipt_b64}`;
+          simVisualPreviewCol.style.display = "block";
+        }
+      }
+    } catch (err) {
+      simToolBadge.textContent = "Simulation Failed";
+      simJsonOutput.textContent = "Error executing simulation: " + err.message;
+    }
+  }
+
+  btnCloseSim?.addEventListener("click", () => {
+    if (toolSimModal) toolSimModal.style.display = "none";
+  });
+  btnDoneSim?.addEventListener("click", () => {
+    if (toolSimModal) toolSimModal.style.display = "none";
+  });
+
+  // Load tools on launch
+  loadToolsCatalog();
+
   // Initial Session Kickoff
   initializeOrUpdateSession(false);
 
