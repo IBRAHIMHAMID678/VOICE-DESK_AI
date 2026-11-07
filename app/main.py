@@ -232,7 +232,7 @@ def _fallback_text(lang: str) -> str:
 
 @app.get("/", include_in_schema=False)
 def index():
-    return RedirectResponse("/dashboard")
+    return RedirectResponse("/demo")
 
 
 @app.get("/dashboard", response_class=HTMLResponse)

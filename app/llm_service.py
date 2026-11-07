@@ -1,12 +1,14 @@
-"""Ultra-fast Conversational LLM Service for Live Voice Calls.
+"""Conversational LLM Service for Custom Voice Agents.
 
 Features:
 - Primary: Groq Cloud (qwen/qwen3.8-27b) with ~80ms TTFT
 - Fallback: OpenRouter free models (nvidia/nemotron-3.5-lightning:free)
 - Generates bilingual output:
-  1. 'roman_urdu': Natural Roman Urdu with English loanwords for UI display
-  2. 'urdu_script': Native Urdu script for authentic Pakistani/Punjabi phonetic speech synthesis
-- Natural Lahori / Punjabi warmth ('Ji haan ji', 'Bilkul ji', 'Koi masla hi nahi ji')
+  1. 'roman_urdu': Natural Roman Urdu with familiar English loanwords for UI display
+  2. 'urdu_script': Native Urdu script for authentic Pakistani/Punjabi speech synthesis
+- Configurable agent name, business domain, and operations overview
+- Strict Zero-Hallucination Guardrail: Enforces user-defined fallback response when requested info is unknown
+- Detects booking/order confirmation and produces structured transaction data for paper receipt generation
 """
 from __future__ import annotations
 
@@ -38,71 +40,92 @@ GROQ_ENDPOINT = "https://api.groq.com/openai/v1/chat/completions"
 OPENROUTER_ENDPOINT = "https://openrouter.ai/api/v1/chat/completions"
 
 
-def build_system_prompt(business_profile: dict) -> str:
-    """Builds an authentic, dynamic Pakistani Punjabi/Lahori receptionist prompt."""
-    name = business_profile.get("name", "Hamara Clinic / Business")
-    category = business_profile.get("category", "General Service")
-    hours = business_profile.get("hours", "11:00 AM se 9:00 PM")
-    location = business_profile.get("location", "Pakistan")
-    services = business_profile.get("services", [])
-    receptionist_name = business_profile.get("receptionist_name", "Ayesha")
+def build_system_prompt(profile: dict) -> str:
+    """Builds a dynamic, business-tailored prompt with zero-hallucination fallback rules."""
+    agent_name = profile.get("agent_name") or profile.get("receptionist_name", "Representative")
+    biz_name = profile.get("name", "Hamara Business")
+    category = profile.get("category", "General Service")
+    description = profile.get("description", "Customer service and client consultations.")
+    hours = profile.get("hours", "10:00 AM se 9:00 PM")
+    location = profile.get("location", "Pakistan")
+    services = profile.get("services", [])
+    fallback_response = profile.get(
+        "fallback_response",
+        "Main is baare mein abhi confirm nahi bata sakti ji, main management se pooch kar aap ko update karti hoon."
+    )
+    tone = profile.get("tone", "warm_punjabi")
 
     services_text = ""
     for s in services:
         services_text += f"- {s.get('name')}: Rs {s.get('price_pkr', 'Munasib')} ({s.get('duration_min', 30)} mins)\n"
 
-    prompt = f"""You are {receptionist_name}, the warm, polite, native Pakistani front-desk receptionist for "{name}" ({category}) in {location}.
-Operating Hours: {hours}
+    tone_instruction = "Use natural, respectful Pakistani hospitality with warmth ('Ji haan ji', 'Bilkul ji', 'Koi masla hi nahi ji', 'G zaroor')."
+    if tone == "professional_formal":
+        tone_instruction = "Maintain a courteous, highly professional, polished Urdu corporate tone ('G bilkul', 'Tashreef layen', 'Khush-aamdeed')."
+    elif tone == "modern_bilingual":
+        tone_instruction = "Speak in modern urban Pakistani conversational style (natural Urdu blended with standard English business terms like appointment, timing, discount, confirmed)."
 
-Our Services & Pricing:
-{services_text if services_text else "- Consultation & Services: Rs 1,500"}
+    prompt = f"""You are {agent_name}, the front-desk representative and phone agent for "{biz_name}" ({category}) located in {location}.
 
-CRITICAL PERSONA & DIALECT RULES:
-1. Warm Pakistani Punjabi & Lahori hospitality:
-   - Use natural local markers: "Ji haan ji", "Bilkul ji", "Koi masla hi nahi ji", "Acha ji", "Khairiyat ji", "Zaroor ji".
-   - Be genuinely friendly, respectful, and helpful.
-2. Brevity:
-   - Maximum 1 to 2 short sentences (under 22 words total). Never monologue.
-3. Accurate Business Answers:
-   - Only quote the exact services, prices, and hours listed above.
-4. Output Format:
-   - You MUST output a strict JSON object with EXACTLY two fields:
-     {{
-       "roman_urdu": "Short natural Roman Urdu reply for reading",
-       "urdu_script": "The exact same reply in proper Urdu script for native phonetic speech"
-     }}
+ABOUT OUR BUSINESS & OPERATIONS:
+{description}
+
+OPERATING HOURS:
+{hours}
+
+OUR VERIFIED SERVICES & PRICING (PKR):
+{services_text if services_text else "- General Consultation & Services: Rs 1,500"}
+
+CRITICAL BEHAVIOR & PERSONA RULES:
+1. Tone: {tone_instruction}
+2. Brevity for Voice:
+   - Keep replies to 1-2 concise, spoken sentences (under 24 words).
+   - Talk like a real human on a telephone call, not an essay generator.
+3. STRICT ZERO-HALLUCINATION GUARDRAIL:
+   - You ONLY know the business details, services, prices, and hours listed above.
+   - If the caller asks for information, products, policies, or medical/legal advice NOT mentioned above, DO NOT make up answers or guess.
+   - Respond with this fallback: "{fallback_response}"
+4. TRANSACTION & RECEIPT TRIGGER:
+   - If the caller agrees to book an appointment, order an item, or confirms a service, set "booking_confirmed": true and include the item details.
+5. STRICT JSON OUTPUT FORMAT:
+   {{
+     "roman_urdu": "Natural Roman Urdu reply for reading on screen",
+     "urdu_script": "The exact same reply in proper Urdu script for native phonetic speech",
+     "booking_confirmed": false,
+     "confirmed_items": []
+   }}
 """
     return prompt.strip()
 
 
-def _parse_bilingual_response(raw_text: str) -> tuple[str, str]:
-    """Parse JSON or fallback to text."""
+def _parse_bilingual_response(raw_text: str) -> tuple[str, str, dict]:
+    """Parse JSON or fallback to text, returning (roman_urdu, urdu_script, metadata)."""
     raw_text = raw_text.strip()
     try:
-        # Match JSON block or direct JSON
         match = re.search(r"\{.*\}", raw_text, re.DOTALL)
         if match:
             data = json.loads(match.group(0))
             roman = data.get("roman_urdu", "").strip()
             urdu = data.get("urdu_script", "").strip()
             if roman:
-                return roman, urdu or roman
+                return roman, urdu or roman, data
     except Exception:
         pass
-    return raw_text, raw_text
+    return raw_text, raw_text, {}
 
 
-async def generate_dynamic_greeting(business_profile: dict) -> tuple[str, str]:
-    """Generates an authentic, dynamic greeting customized to the business."""
-    name = business_profile.get("name", "Hamara Clinic")
-    category = business_profile.get("category", "Service")
-    location = business_profile.get("location", "Lahore")
+async def generate_dynamic_greeting(profile: dict) -> tuple[str, str]:
+    """Generates an authentic, dynamic greeting customized to the business and agent name."""
+    agent_name = profile.get("agent_name") or profile.get("receptionist_name", "Representative")
+    biz_name = profile.get("name", "Hamara Business")
+    category = profile.get("category", "Service")
+    location = profile.get("location", "Lahore")
 
-    prompt = f"""Generate a lively, warm 1-sentence greeting from Ayesha (receptionist) for "{name}" ({category}) in {location}.
-Output JSON format:
+    prompt = f"""Generate a lively, warm 1-sentence opening greeting from {agent_name} for "{biz_name}" ({category}) in {location}.
+Output JSON:
 {{
-  "roman_urdu": "Salam ji! {name} mein khush-aamdeed. Main Ayesha baat kar rahi hoon, ji kahiye kis cheez mein madad kar sakti hoon?",
-  "urdu_script": "سلام جی! {name} میں خوش آمدید۔ میں عائشہ بات کر رہی ہوں، جی کہیے کس چیز میں مدد کر سکتی ہوں؟"
+  "roman_urdu": "Salam ji! {biz_name} mein khush-aamdeed. Main {agent_name} baat kar rahi hoon, ji batayein kis cheez mein madad kar sakti hoon?",
+  "urdu_script": "سلام جی! {biz_name} میں خوش آمدید۔ میں {agent_name} بات کر رہی ہوں، جی بتائیں کس چیز میں مدد کر سکتی ہوں؟"
 }}"""
 
     if GROQ_API_KEY:
@@ -110,7 +133,6 @@ Output JSON format:
             headers = {
                 "Authorization": f"Bearer {GROQ_API_KEY}",
                 "Content-Type": "application/json",
-                "User-Agent": "Mozilla/5.0",
             }
             payload = {
                 "model": GROQ_MODEL,
@@ -124,30 +146,31 @@ Output JSON format:
                 if res.status_code == 200:
                     data = res.json()
                     content = data["choices"][0]["message"]["content"]
-                    return _parse_bilingual_response(content)
+                    r, u, _ = _parse_bilingual_response(content)
+                    return r, u
         except Exception as e:
             log.warning("Dynamic greeting LLM failed: %s", e)
 
     # Fallback
-    r = f"Salam ji! {name} mein khush-aamdeed. Main Ayesha baat kar rahi hoon, ji batayein kis tarah madad kar sakti hoon?"
-    u = f"سلام جی! {name} میں خوش آمدید۔ میں عائشہ بات کر رہی ہوں، جی بتائیں کس طرح مدد کر سکتی ہوں؟"
+    r = f"Salam ji! {biz_name} mein khush-aamdeed. Main {agent_name} baat kar raha hoon, ji kahiye kis tarah madad kar sakta hoon?"
+    u = f"سلام جی! {biz_name} میں خوش آمدید۔ میں {agent_name} بات کر رہا ہوں، جی کہیے کس طرح مدد کر سکتا ہوں؟"
     return r, u
 
 
 async def generate_response(
-    messages: list[dict], business_profile: dict
-) -> tuple[str, str]:
-    """Generate conversational reply returning (roman_urdu, urdu_script)."""
-    system_prompt = build_system_prompt(business_profile)
+    messages: list[dict], profile: dict
+) -> tuple[str, str, dict]:
+    """Generate conversational reply returning (roman_urdu, urdu_script, metadata)."""
+    system_prompt = build_system_prompt(profile)
     full_messages = [{"role": "system", "content": system_prompt}] + messages
 
-    # 1. Primary: Groq Cloud
+    # 1. Primary: Groq Cloud (~80ms TTFT)
     if GROQ_API_KEY:
         try:
             headers = {
                 "Authorization": f"Bearer {GROQ_API_KEY}",
                 "Content-Type": "application/json",
-                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
+                "User-Agent": "Mozilla/5.0",
             }
             payload = {
                 "model": GROQ_MODEL,
@@ -174,7 +197,7 @@ async def generate_response(
                 "Authorization": f"Bearer {OPENROUTER_API_KEY}",
                 "Content-Type": "application/json",
                 "HTTP-Referer": "https://github.com/IBRAHIMHAMID678/urdu-voice-receptionist",
-                "X-Title": "Voice Receptionist Demo",
+                "X-Title": "Voice Agent Platform",
             }
             payload = {
                 "model": OPENROUTER_MODEL,
@@ -188,12 +211,10 @@ async def generate_response(
                     data = res.json()
                     content = data["choices"][0]["message"]["content"].strip()
                     return _parse_bilingual_response(content)
-                else:
-                    log.warning("OpenRouter error %s: %s", res.status_code, res.text[:200])
         except Exception as e:
             log.error("OpenRouter fallback failed: %s", e)
 
     # 3. Emergency static fallback
-    r = "Ji bilkul ji, main samajh gayi. Kahiye kis din aur time appointment confirm kar doon?"
-    u = "جی بالکل جی، میں سمجھ گئی۔ کہیے کس دن اور ٹائم اپائنٹمنٹ کنفرم کر دوں؟"
-    return r, u
+    r = "Ji bilkul ji, main samajh gaya. Kahiye kis din aur waqt appointment confirm kar doon?"
+    u = "جی بالکل جی، میں سمجھ گیا۔ کہیے کس دن اور وقت اپائنٹمنٹ کنفرم کر دوں؟"
+    return r, u, {}

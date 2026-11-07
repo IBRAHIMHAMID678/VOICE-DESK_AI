@@ -3,285 +3,563 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Live Voice AI Receptionist — Pakistani Urdu Clone</title>
+  <title>VoiceDesk AI — Autonomous Pakistani Urdu Voice Agents & Physical Transaction Documents</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Noto+Nastaliq+Urdu:wght@500;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/static/live_demo.css?v=3.0">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Noto+Nastaliq+Urdu:wght@500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/live_demo.css?v=4.0">
 </head>
 <body>
-  <div class="app-shell">
-    <!-- Top Header -->
-    <header class="top-bar">
-      <div class="brand">
-        <div class="brand-logo">
-          <span class="pulse-dot"></span>
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg>
+  <div class="app-layout">
+    
+    <!-- Top Navigation Header -->
+    <header class="app-header">
+      <div class="header-inner">
+        <div class="brand-zone">
+          <div class="brand-emblem">
+            <span class="emblem-core"></span>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg>
+          </div>
+          <div class="brand-copy">
+            <div class="brand-title-row">
+              <span class="brand-name">VoiceDesk AI</span>
+              <span class="badge badge-version">Enterprise v4.0</span>
+            </div>
+            <p class="brand-desc">Autonomous Urdu & English Voice Receptionists • Zero-Shot Voice Cloning</p>
+          </div>
         </div>
-        <div class="brand-text">
-          <h1>VoiceDesk AI</h1>
-          <span class="brand-tag">Urdu & Roman Voice Clone</span>
+
+        <!-- Global Navigation Tabs -->
+        <nav class="nav-tabs" role="tablist">
+          <button type="button" class="tab-btn active" data-tab="tab-studio" role="tab" aria-selected="true">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg>
+            <span>Agent Studio</span>
+          </button>
+          <button type="button" class="tab-btn" data-tab="tab-receipts" role="tab" aria-selected="false">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+            <span>Receipts & OCR Proof</span>
+          </button>
+          <button type="button" class="tab-btn" data-tab="tab-capabilities" role="tab" aria-selected="false">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>
+            <span>Platform Overview</span>
+          </button>
+        </nav>
+
+        <div class="header-latency-pill">
+          <span class="live-dot"></span>
+          <span class="latency-val">~85ms TTFT</span>
+          <span class="latency-lbl">Groq LPU</span>
         </div>
-      </div>
-      <div class="header-badges">
-        <span class="badge badge-accent">⚡ Sub-700ms Latency</span>
-        <span class="badge badge-subtle">Fish Audio + Groq LPU</span>
       </div>
     </header>
 
-    <!-- Main Container -->
-    <main class="main-content">
+
+    <!-- Main Body Container -->
+    <main class="app-main">
       
-      <!-- SCREEN 1: Business Setup -->
-      <section id="screen-setup" class="screen-card active">
-        <div class="screen-header">
-          <div class="step-chip">Step 1 of 3</div>
-          <h2>Configure Your Receptionist</h2>
-          <p class="subtitle">Select a preset or enter your business details. The AI uses this to answer caller questions.</p>
-        </div>
+      <!-- ======================================================== -->
+      <!-- TAB 1: AGENT STUDIO & LIVE CALL                          -->
+      <!-- ======================================================== -->
+      <div id="tab-studio" class="tab-pane active" role="tabpanel">
+        
+        <!-- STEP VIEW 1: AGENT BUILDER -->
+        <section id="view-builder" class="studio-card view-section active">
+          
+          <div class="studio-hero">
+            <div class="hero-chip">Voice Agent Studio</div>
+            <h1>Configure Your Autonomous Voice Receptionist</h1>
+            <p class="hero-subtitle">
+              Provide your business operations, choose or clone an authentic voice, and set zero-hallucination fallback rules. 
+              The agent adapts to your specific business and answers customer phone calls live.
+            </p>
+          </div>
 
-        <!-- Presets Carousel -->
-        <div class="presets-row">
-          <button type="button" class="preset-btn active" data-preset="dental">
-            <span class="preset-icon">🦷</span>
-            <span class="preset-title">Dental Clinic</span>
-          </button>
-          <button type="button" class="preset-btn" data-preset="restaurant">
-            <span class="preset-icon">🍔</span>
-            <span class="preset-title">Burger / Cafe</span>
-          </button>
-          <button type="button" class="preset-btn" data-preset="salon">
-            <span class="preset-icon">💇‍♀️</span>
-            <span class="preset-title">Salon & Spa</span>
-          </button>
-          <button type="button" class="preset-btn" data-preset="realestate">
-            <span class="preset-icon">🏠</span>
-            <span class="preset-title">Real Estate</span>
-          </button>
-        </div>
+          <form id="agent-builder-form" class="studio-form">
+            
+            <!-- SECTION 1: AGENT IDENTITY -->
+            <div class="form-block">
+              <div class="block-header">
+                <span class="step-num">1</span>
+                <div>
+                  <h3>Agent Identity & Persona</h3>
+                  <p class="block-desc">Give your voice agent a name and communication style suited to your business.</p>
+                </div>
+              </div>
 
-        <form id="setup-form" class="flow-form">
-          <div class="input-grid">
-            <div class="form-group">
-              <label for="biz-name">Business Name</label>
-              <input type="text" id="biz-name" required value="SmileCare Dental Clinic" placeholder="e.g. Dr. Bilal Dental Care">
+              <div class="grid-2">
+                <div class="field-group">
+                  <label for="agent-name">Agent Name <span class="required">*</span></label>
+                  <input type="text" id="agent-name" required value="Zoya" placeholder="e.g. Tariq, Zoya, Hamza, Sara">
+                  <span class="field-hint">The name the agent introduces itself with to callers.</span>
+                </div>
+
+                <div class="field-group">
+                  <label for="agent-role">Role / Department</label>
+                  <input type="text" id="agent-role" required value="Front Desk Receptionist" placeholder="e.g. Front Desk, Order Desk, Clinic Coordinator">
+                  <span class="field-hint">Function handled by this agent.</span>
+                </div>
+              </div>
+
+              <div class="field-group">
+                <label>Communication Tone & Dialect</label>
+                <div class="radio-cards-row">
+                  <label class="radio-card active">
+                    <input type="radio" name="agent-tone" value="warm_punjabi" checked>
+                    <div class="radio-card-content">
+                      <span class="rc-title">Warm Pakistani Punjabi / Lahori</span>
+                      <span class="rc-desc">"Ji haan ji", "Bilkul ji", "Koi masla hi nahi ji". Respectful, hospitable.</span>
+                    </div>
+                  </label>
+
+                  <label class="radio-card">
+                    <input type="radio" name="agent-tone" value="professional_formal">
+                    <div class="radio-card-content">
+                      <span class="rc-title">Polite Corporate Urdu</span>
+                      <span class="rc-desc">"G bilkul", "Tashreef layen", "Khush-aamdeed". Elegant clinic / corporate tone.</span>
+                    </div>
+                  </label>
+
+                  <label class="radio-card">
+                    <input type="radio" name="agent-tone" value="modern_bilingual">
+                    <div class="radio-card-content">
+                      <span class="rc-title">Modern Bilingual (Urdu + English)</span>
+                      <span class="rc-desc">Natural urban Pakistani speech blended with standard English loanwords.</span>
+                    </div>
+                  </label>
+                </div>
+              </div>
             </div>
-            <div class="form-group">
-              <label for="biz-category">Category</label>
-              <input type="text" id="biz-category" required value="Dental & Aesthetics" placeholder="e.g. Healthcare, Food, Beauty">
+
+            <!-- SECTION 2: VOICE CONFIGURATION & CLONING -->
+            <div class="form-block">
+              <div class="block-header">
+                <span class="step-num">2</span>
+                <div>
+                  <h3>Voice Architecture & Cloning</h3>
+                  <p class="block-desc">Choose between zero-shot cloning of your actual voice or studio Pakistani neural voices.</p>
+                </div>
+              </div>
+
+              <div class="voice-mode-selector">
+                <button type="button" class="mode-tab active" data-vmode="clone">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg>
+                  <span>Clone My Voice (Zero-Shot AI)</span>
+                </button>
+                <button type="button" class="mode-tab" data-vmode="preset">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 5L6 9H2v6h4l5 4V5z"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
+                  <span>Studio Pakistani Neural Voices</span>
+                </button>
+              </div>
+
+              <!-- SUBPANEL A: CLONE VOICE -->
+              <div id="panel-voice-clone" class="voice-panel active">
+                <div class="clone-prompt-card">
+                  <div class="cp-header">
+                    <span class="badge badge-amber">Record 15–30 Seconds</span>
+                    <span class="cp-tip">Whisper will automatically transcribe your speech for 100% phonetic forced alignment</span>
+                  </div>
+                  <div class="cp-script">
+                    "Salam! Hamari business clinic Lahore mein hai. Hum appointments, consultations aur client queries handle karte hain. Timing subah das se raat nau baje tak hai. Aap kis waqt appointment book karna chahenge?"
+                  </div>
+                </div>
+
+                <div class="recorder-bar">
+                  <div class="recorder-visual">
+                    <canvas id="waveform-canvas" width="420" height="64"></canvas>
+                    <div id="recorder-timer" class="rec-timer">00:00 / 00:30</div>
+                  </div>
+
+                  <div class="recorder-actions">
+                    <button type="button" id="btn-start-record" class="btn-rec">
+                      <span class="rec-bullet"></span>
+                      <span>Record My Voice</span>
+                    </button>
+                    <button type="button" id="btn-stop-record" class="btn-stop" style="display:none;">
+                      <span class="stop-sq"></span>
+                      <span>Stop & Capture</span>
+                    </button>
+                  </div>
+
+                  <div id="voice-preview-row" class="preview-row" style="display:none;">
+                    <audio id="recorded-preview-audio" controls></audio>
+                    <button type="button" id="btn-rerecord" class="btn-sm-ghost">Re-record</button>
+                    <span class="preview-status">✓ Sample Captured</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- SUBPANEL B: STUDIO NEURAL VOICES -->
+              <div id="panel-voice-preset" class="voice-panel" style="display:none;">
+                <div class="studio-voices-grid">
+                  <label class="voice-tile active">
+                    <input type="radio" name="preset-voice" value="ur-PK-UzmaNeural" checked>
+                    <div class="vt-body">
+                      <div class="vt-top">
+                        <span class="vt-name">Uzma</span>
+                        <span class="vt-tag">Female • Lahori / Punjabi</span>
+                      </div>
+                      <p class="vt-desc">Warm, respectful, conversational hospital/clinic & salon receptionist tone.</p>
+                    </div>
+                  </label>
+
+                  <label class="voice-tile">
+                    <input type="radio" name="preset-voice" value="ur-PK-AsadNeural">
+                    <div class="vt-body">
+                      <div class="vt-top">
+                        <span class="vt-name">Asad</span>
+                        <span class="vt-tag">Male • Professional Islamabad</span>
+                      </div>
+                      <p class="vt-desc">Crisp, authoritative, clear consultant, real estate & business coordinator tone.</p>
+                    </div>
+                  </label>
+
+                  <label class="voice-tile">
+                    <input type="radio" name="preset-voice" value="ur-IN-GulNeural">
+                    <div class="vt-body">
+                      <div class="vt-top">
+                        <span class="vt-name">Gul</span>
+                        <span class="vt-tag">Female • Courteous Urdu</span>
+                      </div>
+                      <p class="vt-desc">Polite, gentle customer service & order management cadence.</p>
+                    </div>
+                  </label>
+
+                  <label class="voice-tile">
+                    <input type="radio" name="preset-voice" value="ur-IN-SalmanNeural">
+                    <div class="vt-body">
+                      <div class="vt-top">
+                        <span class="vt-name">Salman</span>
+                        <span class="vt-tag">Male • Commercial Urdu</span>
+                      </div>
+                      <p class="vt-desc">Energetic, commercial retail & restaurant hospitality voice.</p>
+                    </div>
+                  </label>
+                </div>
+              </div>
+
+              <!-- Speed adjustment -->
+              <div class="speed-control-row">
+                <label for="voice-speed">Speech Pace: <span id="speed-val">1.0x</span></label>
+                <input type="range" id="voice-speed" min="0.85" max="1.15" step="0.05" value="1.0">
+              </div>
+            </div>
+
+            <!-- SECTION 3: BUSINESS INFORMATION & OPERATIONS -->
+            <div class="form-block">
+              <div class="block-header">
+                <span class="step-num">3</span>
+                <div>
+                  <h3>Business Intel & Operational Details</h3>
+                  <p class="block-desc">What does your business do? The agent strictly learns from this context.</p>
+                </div>
+              </div>
+
+              <div class="grid-2">
+                <div class="field-group">
+                  <label for="biz-name">Business / Company Name <span class="required">*</span></label>
+                  <input type="text" id="biz-name" required value="SmileCare Dental Clinic" placeholder="e.g. Dr. Bilal Dental, Lahore Biryani, Apex Law">
+                </div>
+
+                <div class="field-group">
+                  <label for="biz-category">Industry / Category</label>
+                  <input type="text" id="biz-category" required value="Dental & Aesthetics Clinic" placeholder="e.g. Healthcare, Restaurant, Real Estate, E-commerce">
+                </div>
+              </div>
+
+              <div class="field-group">
+                <label for="biz-description">Business Overview & What We Do <span class="required">*</span></label>
+                <textarea id="biz-description" rows="3" required placeholder="Describe your business operations, specialities, policies, and what callers typically ask about...">We are a premier dental aesthetic clinic in Gulberg Lahore providing teeth scaling, laser whitening, cavity fillings, and routine dental checkups. Consultations are by appointment. Walk-ins subject to doctor availability.</textarea>
+                <span class="field-hint">The AI uses this knowledge base to answer caller queries accurately.</span>
+              </div>
+
+              <div class="grid-2">
+                <div class="field-group">
+                  <label for="biz-location">City & Address</label>
+                  <input type="text" id="biz-location" required value="MM Alam Road, Gulberg III, Lahore" placeholder="e.g. F-7 Markaz Islamabad, DHA Phase 5 Karachi">
+                </div>
+
+                <div class="field-group">
+                  <label for="biz-hours">Operating Hours</label>
+                  <input type="text" id="biz-hours" required value="11:00 AM se 9:00 PM (Monday - Saturday)" placeholder="e.g. 10 AM to 8 PM, Sunday Closed">
+                </div>
+              </div>
+
+              <!-- Dynamic Services & Pricing Table -->
+              <div class="services-box">
+                <div class="sb-header">
+                  <div>
+                    <h4>Services / Products & Pricing (PKR)</h4>
+                    <p class="sb-sub">The agent will only quote these verified prices to callers.</p>
+                  </div>
+                  <button type="button" id="btn-add-service-row" class="btn-sm-accent">+ Add Item</button>
+                </div>
+
+                <div id="services-table" class="services-rows-container">
+                  <!-- Dynamically rendered -->
+                </div>
+              </div>
+            </div>
+
+            <!-- SECTION 4: FALLBACK MECHANISM & GUARDRAILS (CRITICAL REQUIREMENT) -->
+            <div class="form-block guardrail-block">
+              <div class="block-header">
+                <span class="step-num">4</span>
+                <div>
+                  <h3>Zero-Hallucination Fallback Mechanism</h3>
+                  <p class="block-desc">Configure what the agent must say when asked about unlisted items or unknown queries.</p>
+                </div>
+              </div>
+
+              <div class="field-group">
+                <label for="fallback-response">Agent Fallback Statement <span class="required">*</span></label>
+                <textarea id="fallback-response" rows="2" required placeholder="What should the agent say when it does not know the answer?">Main is baare mein abhi confirm nahi bata sakti ji, main management se pooch kar aap ko update karti hoon.</textarea>
+                <div class="guardrail-note">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                  <span><strong>Zero-Hallucination Guarantee:</strong> If a caller asks about services, discounts, or policies not in your list, the agent is strictly prohibited from guessing and will immediately use this fallback response.</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- SUBMIT & LAUNCH CALL -->
+            <div class="builder-actions">
+              <button type="submit" id="btn-deploy-agent" class="btn-primary-hero">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+                <span>Launch Live Phone Call with Agent</span>
+              </button>
+            </div>
+
+          </form>
+        </section>
+
+
+        <!-- STEP VIEW 2: LIVE CALL ROOM (FULL DUPLEX) -->
+        <section id="view-call" class="studio-card view-section call-room-view">
+          
+          <div class="call-top-bar">
+            <div class="call-pill-group">
+              <div class="status-live-chip">
+                <span class="live-dot pulse"></span>
+                <span id="call-timer-display">Call Active (00:00)</span>
+              </div>
+              <span id="agent-voice-badge" class="badge badge-amber">Custom Voice Active</span>
+            </div>
+
+            <button type="button" id="btn-exit-to-builder" class="btn-ghost-sm">← Back to Builder</button>
+          </div>
+
+          <!-- Main Call Hardware Avatar -->
+          <div class="telephony-avatar-console">
+            <div class="avatar-ripple r-1"></div>
+            <div class="avatar-ripple r-2"></div>
+            <div class="avatar-ripple r-3"></div>
+            <div class="telephony-disc" id="telephony-disc">
+              <span id="avatar-initials-display" class="disc-initials">ZY</span>
+            </div>
+            <div class="telephony-identity">
+              <h2 id="agent-display-name">Zoya</h2>
+              <p id="agent-display-role">Voice Receptionist • <span id="agent-biz-label">SmileCare Dental</span></p>
             </div>
           </div>
 
-          <div class="input-grid">
-            <div class="form-group">
-              <label for="biz-location">City / Location</label>
-              <input type="text" id="biz-location" required value="Gulberg III, Lahore" placeholder="e.g. F-7 Markaz, Islamabad">
-            </div>
-            <div class="form-group">
-              <label for="biz-hours">Operating Hours</label>
-              <input type="text" id="biz-hours" required value="11:00 AM se 9:00 PM (Monday - Saturday)" placeholder="e.g. 12 PM to 11 PM">
+          <!-- Real-Time Acoustic Status Bar -->
+          <div class="acoustic-status-bar" aria-live="polite">
+            <div class="status-dot-pulse" id="acoustic-dot"></div>
+            <span id="acoustic-status-text">Connecting audio channel...</span>
+            <div class="equalizer-bars" id="equalizer-bars" aria-hidden="true">
+              <span></span><span></span><span></span><span></span>
             </div>
           </div>
 
-          <!-- Services Table -->
-          <div class="services-section">
-            <div class="section-row">
-              <label>Services & Pricing (PKR)</label>
-              <button type="button" id="btn-add-service" class="btn-text">+ Add Service</button>
-            </div>
-            <div id="services-list" class="services-list">
-              <!-- Dynamically populated -->
-            </div>
+          <!-- Live Bilingual Transcript -->
+          <div class="transcript-viewport" id="call-transcript-viewport" role="log" aria-label="Conversation Transcript">
+            <!-- Dynamic message bubbles -->
           </div>
 
-          <div class="form-actions">
-            <button type="button" id="btn-to-voice" class="btn-primary">
-              <span>Next: Record Voice Sample</span>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 18 6-6-6-6"/></svg>
+          <!-- Telephony Controls Dock -->
+          <div class="telephony-dock" role="toolbar" aria-label="Call controls">
+            <button type="button" id="btn-toggle-mic" class="dock-btn mic-btn active" title="Mute/Unmute Microphone">
+              <svg class="icon-mic" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg>
+              <span class="dock-lbl">Mic On</span>
+            </button>
+
+            <button type="button" id="btn-call-interrupt" class="dock-btn interrupt-btn" title="Barge-In (Interrupt Agent)">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
+              <span>Interrupt</span>
+            </button>
+
+            <button type="button" id="btn-hangup-call" class="dock-btn hangup-btn" title="Hang Up">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="m3.58 13.91 3.5-3.5a1.5 1.5 0 0 1 2.12 0l2.3 2.3a14.8 14.8 0 0 0 3.5-2.2 14.8 14.8 0 0 0 2.2-3.5l-2.3-2.3a1.5 1.5 0 0 1 0-2.12l3.5-3.5a1.5 1.5 0 0 1 2.12 0l2.83 2.83a3.5 3.5 0 0 1 0 4.95A23.7 23.7 0 0 1 12 21.41a23.7 23.7 0 0 1-11.25-11.25 3.5 3.5 0 0 1 0-4.95l2.83-2.83a1.5 1.5 0 0 1 2.12 0Z"/></svg>
+              <span class="dock-lbl">End</span>
             </button>
           </div>
-        </form>
-      </section>
 
-
-      <!-- SCREEN 2: 30-Second Voice Recorder -->
-      <section id="screen-voice" class="screen-card">
-        <div class="screen-header">
-          <div class="step-chip">Step 2 of 3</div>
-          <h2>Clone Your Receptionist Voice</h2>
-          <p class="subtitle">Record 15–30 seconds of speech. Our zero-shot cloning engine will clone this exact voice for the live call.</p>
-        </div>
-
-        <!-- Script Prompt Card -->
-        <div class="script-card">
-          <div class="script-card-header">
-            <span class="badge badge-accent">Read this sample script</span>
-            <span class="lang-switch">Roman Urdu / Urdu</span>
-          </div>
-          <div class="script-text">
-            "Salam! Hamari clinic Lahore mein hai. Hum checkups, scaling aur teeth whitening provide karte hain. Timing subah gyarah se raat nau baje tak hai. Aap kis time appointment book karna chahenge?"
-          </div>
-          <div class="script-urdu-sub">
-            سلام! ہماری کلینک لاہور میں واقع ہے۔ ہم چیک اپ اور اسکیلنگ کی خدمات فراہم کرتے ہیں۔
-          </div>
-        </div>
-
-        <!-- Visualizer & Recorder -->
-        <div class="record-console">
-          <div class="waveform-box">
-            <canvas id="waveform-canvas" width="400" height="80"></canvas>
-            <div id="timer-display" class="timer-display">00:00 / 00:30</div>
-          </div>
-
-          <div class="record-controls">
-            <button type="button" id="btn-record" class="record-btn">
-              <span class="record-icon"></span>
-              <span class="record-label">Tap to Record Voice</span>
-            </button>
-            <button type="button" id="btn-stop-record" class="stop-btn" style="display:none;">
-              <span class="stop-icon"></span>
-              <span>Stop & Save Audio</span>
-            </button>
-          </div>
-
-          <!-- Playback Review -->
-          <div id="playback-preview" class="playback-box" style="display:none;">
-            <audio id="recorded-audio" controls></audio>
-            <button type="button" id="btn-re-record" class="btn-ghost">Re-record</button>
-          </div>
-        </div>
-
-        <div class="form-actions split">
-          <button type="button" id="btn-back-setup" class="btn-secondary">Back</button>
-          <button type="button" id="btn-launch-call" class="btn-primary glow">
-            <span>Launch Live Call Demo</span>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
-          </button>
-        </div>
-      </section>
-
-
-      <!-- SCREEN 3: Active Live Phone Call Room -->
-      <section id="screen-call" class="screen-card call-screen">
-        <div class="call-top">
-          <div class="call-status-pill">
-            <span class="call-live-indicator"></span>
-            <span id="call-timer-text">Calling...</span>
-          </div>
-          <div class="call-mode-badge" id="call-voice-mode">
-            Cloned Voice Active
-          </div>
-        </div>
-
-        <!-- Phone Center Avatar -->
-        <div class="call-avatar-zone">
-          <div class="radial-ripple ripple-1"></div>
-          <div class="radial-ripple ripple-2"></div>
-          <div class="call-avatar" id="avatar-pulse">
-            <span class="avatar-initials" id="avatar-text">SC</span>
-          </div>
-          <div class="call-identity">
-            <h3 id="call-biz-title">SmileCare Dental</h3>
-            <p id="call-sub-status">Ayesha (Receptionist)</p>
-          </div>
-        </div>
-
-        <!-- Live Status Bar -->
-        <div class="speech-status-bar" aria-live="polite">
-          <div class="status-indicator-dot" id="agent-state-dot"></div>
-          <span id="agent-state-text">Connecting to receptionist...</span>
-          <div class="mini-equalizer" id="mini-equalizer" aria-hidden="true">
-            <span></span><span></span><span></span>
-          </div>
-        </div>
-
-        <!-- Rolling Live Transcript -->
-        <div class="transcript-feed" id="transcript-feed" role="log" aria-label="Live conversation transcript">
-          <div class="transcript-msg agent" data-role="agent" data-text="Connecting...">
-            <div class="msg-header-row">
-              <span class="speaker-tag">Ayesha (Receptionist)</span>
-              <span class="urdu-badge">اردو • Lahori Warmth</span>
-            </div>
-            <p>Connecting to front desk...</p>
-          </div>
-        </div>
-
-        <!-- Call Actions Bar -->
-        <div class="call-dock" role="toolbar" aria-label="Call controls">
-          <button type="button" id="btn-mic-toggle" class="dock-btn mic-btn active" title="Mute/Unmute Microphone" aria-label="Toggle microphone mute">
-            <svg class="icon-mic" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg>
-            <span class="dock-btn-label">Mic On</span>
-          </button>
-
-          <button type="button" id="btn-interrupt" class="dock-btn interrupt-btn" title="Tap to interrupt receptionist (Barge-In)" aria-label="Interrupt receptionist speaking">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
-            <span>Interrupt</span>
-          </button>
-
-          <button type="button" id="btn-end-call" class="dock-btn end-btn" title="End Call Session" aria-label="End call">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="m3.58 13.91 3.5-3.5a1.5 1.5 0 0 1 2.12 0l2.3 2.3a14.8 14.8 0 0 0 3.5-2.2 14.8 14.8 0 0 0 2.2-3.5l-2.3-2.3a1.5 1.5 0 0 1 0-2.12l3.5-3.5a1.5 1.5 0 0 1 2.12 0l2.83 2.83a3.5 3.5 0 0 1 0 4.95A23.7 23.7 0 0 1 12 21.41a23.7 23.7 0 0 1-11.25-11.25 3.5 3.5 0 0 1 0-4.95l2.83-2.83a1.5 1.5 0 0 1 2.12 0Z"/></svg>
-            <span class="dock-btn-label">End</span>
-          </button>
-        </div>
-
-        <!-- Quick Questions Assist (for quick test clicks) -->
-        <div class="test-prompts-bar">
-          <span class="prompt-hint">Tap to ask quickly:</span>
-          <div class="prompts-scroll">
-            <button type="button" class="quick-chip" data-query="Kal shaam 5 baje appointment mil sakti hai?">"Kal 5 baje appointment?"</button>
-            <button type="button" class="quick-chip" data-query="Teeth scaling ke kitne charges hain?">"Charges kitne hain?"</button>
-            <button type="button" class="quick-chip" data-query="Clinic ki timing kya hai?">"Timing kya hai?"</button>
-            <button type="button" class="quick-chip" data-query="Thora discount ho sake ga?">"Discount mile ga?"</button>
-          </div>
-        </div>
-      </section>
-
-      <!-- SCREEN 4: Post-Call Success & Export -->
-      <section id="screen-export" class="screen-card">
-        <div class="screen-header text-center">
-          <div class="success-icon">🎉</div>
-          <h2>Live Call Completed!</h2>
-          <p class="subtitle">Your custom AI receptionist is ready to answer customer calls and WhatsApp voice notes 24/7.</p>
-        </div>
-
-        <div class="export-box">
-          <div class="export-metric-grid">
-            <div class="metric-card">
-              <span class="metric-num">~540ms</span>
-              <span class="metric-label">Voice Latency</span>
-            </div>
-            <div class="metric-card">
-              <span class="metric-num">Urdu / Roman</span>
-              <span class="metric-label">Bilingual AI</span>
-            </div>
-            <div class="metric-card">
-              <span class="metric-num">100% Free</span>
-              <span class="metric-label">Tier Inference</span>
+          <!-- Quick Test Question Prompts -->
+          <div class="chips-drawer">
+            <span class="chips-hint">Tap to ask questions:</span>
+            <div id="dynamic-chips-scroll" class="chips-scroll">
+              <!-- Dynamically populated based on user's services & hours -->
             </div>
           </div>
 
-          <div class="whatsapp-card">
-            <div class="wa-icon">
-              <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.301-.15-1.78-.878-2.056-.978-.276-.101-.477-.15-.678.15-.2.301-.777.978-.953 1.18-.175.201-.351.226-.652.075-1.92-1.002-3.176-1.786-4.444-3.957-.333-.57.333-.528.954-1.77.1-.2.05-.376-.025-.526-.075-.15-.678-1.631-.929-2.235-.245-.589-.494-.509-.678-.519l-.578-.01c-.2 0-.527.075-.803.376s-1.054 1.03-1.054 2.51 1.08 2.912 1.23 3.113c.15.201 2.124 3.244 5.146 4.55.719.31 1.28.496 1.718.636.721.23 1.377.198 1.896.12.578-.088 1.78-.727 2.031-1.43.25-.704.25-1.306.175-1.431-.075-.125-.276-.201-.577-.351z"/></svg>
+          <!-- Live Transaction Receipt Notification Bar -->
+          <div id="live-receipt-banner" class="receipt-alert-banner" style="display:none;">
+            <div class="rab-left">
+              <span class="rab-icon">🧾</span>
+              <div>
+                <strong>Physical Transaction Receipt Generated!</strong>
+                <p>The agent confirmed an order/booking and printed a physical verification document.</p>
+              </div>
             </div>
-            <div class="wa-text">
-              <h4>Ready to Deploy to WhatsApp?</h4>
-              <p>Export this configuration straight to your live WhatsApp Business number.</p>
+            <button type="button" id="btn-view-live-receipt" class="btn-sm-amber">View Physical Receipt</button>
+          </div>
+
+        </section>
+
+      </div>
+
+
+      <!-- ======================================================== -->
+      <!-- TAB 2: PHYSICAL RECEIPTS & OCR PROOF                     -->
+      <!-- ======================================================== -->
+      <div id="tab-receipts" class="tab-pane" role="tabpanel">
+        
+        <div class="receipts-layout-grid">
+          
+          <!-- LEFT COLUMN: Physical Paper Receipt View -->
+          <div class="receipt-paper-section">
+            <div class="section-title-row">
+              <div>
+                <h2>Physical Document & Paper Receipt</h2>
+                <p class="section-sub">Authentic thermal printed document for booking & transaction proof.</p>
+              </div>
+              <div class="receipt-action-btns">
+                <button type="button" id="btn-download-receipt-png" class="btn-sm-accent">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                  <span>Download PNG</span>
+                </button>
+                <button type="button" id="btn-print-receipt" class="btn-sm-ghost">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+                  <span>Print</span>
+                </button>
+              </div>
             </div>
-            <button type="button" id="btn-export-wa" class="btn-wa">Export Config</button>
+
+            <!-- THE TACTILE PHYSICAL THERMAL RECEIPT CONTAINER -->
+            <div class="paper-receipt-stage">
+              <div class="paper-receipt-frame" id="paper-receipt-frame">
+                <img id="receipt-paper-img" src="/api/demo/receipt/sample" alt="Physical Paper Receipt">
+              </div>
+            </div>
+          </div>
+
+          <!-- RIGHT COLUMN: OCR DOCUMENT INSPECTOR -->
+          <div class="receipt-ocr-section">
+            <div class="section-title-row">
+              <div>
+                <h2>Multimodal OCR Document Inspector</h2>
+                <p class="section-sub">Extract and verify physical receipts, invoices, and transaction proof.</p>
+              </div>
+            </div>
+
+            <div class="ocr-dropzone" id="ocr-dropzone">
+              <input type="file" id="ocr-file-input" accept="image/*" style="display:none;">
+              <div class="dz-icon">
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+              </div>
+              <h4>Upload or Drop Receipt Image</h4>
+              <p>Supports PNG, JPG, camera scans of thermal paper receipts.</p>
+              <button type="button" id="btn-browse-ocr" class="btn-sm-accent">Select Document Scan</button>
+            </div>
+
+            <div class="ocr-status-row" id="ocr-status-row" style="display:none;">
+              <span class="ocr-spinner"></span>
+              <span id="ocr-status-msg">Extracting line items and verifying totals...</span>
+            </div>
+
+            <!-- EXTRACTED STRUCTURED JSON INSPECTOR -->
+            <div class="ocr-results-box" id="ocr-results-box">
+              <div class="orb-header">
+                <span class="badge badge-green" id="ocr-verified-badge">✔ Verified OCR Schema</span>
+                <span class="orb-label">Extracted JSON Data</span>
+              </div>
+              <pre id="ocr-json-display" class="json-code-block">{
+  "business_name": "Lahore Biryani House",
+  "category": "Restaurant & Dining",
+  "receipt_no": "REC-88421",
+  "date": "07-Nov-2026 01:30 PM",
+  "customer_name": "Salman",
+  "items": [
+    {"name": "Chicken Biryani Single", "qty": 1, "price_pkr": 750},
+    {"name": "Special Seekh Kabab", "qty": 2, "price_pkr": 1100}
+  ],
+  "subtotal_pkr": 1850,
+  "tax_pkr": 0,
+  "total_pkr": 1850,
+  "payment_status": "PAID",
+  "verification_status": "VERIFIED"
+}</pre>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+
+
+      <!-- ======================================================== -->
+      <!-- TAB 3: PLATFORM OVERVIEW & CAPABILITIES                  -->
+      <!-- ======================================================== -->
+      <div id="tab-capabilities" class="tab-pane" role="tabpanel">
+        
+        <div class="capabilities-hero">
+          <h2>Enterprise Voice AI for Local Commerce</h2>
+          <p class="cap-subtitle">Designed specifically for Pakistani service businesses, healthcare clinics, restaurants, and real estate agencies.</p>
+        </div>
+
+        <div class="cap-grid">
+          <div class="cap-card">
+            <div class="cap-icon">🎙️</div>
+            <h3>Zero-Shot Voice Cloning</h3>
+            <p>Clone any person's actual voice with a 15–30 second audio sample. Groq Whisper automatically transcribes the audio to provide 100% phonetic forced alignment without foreign accent distortion.</p>
+          </div>
+
+          <div class="cap-card">
+            <div class="cap-icon">🇵🇰</div>
+            <h3>Authentic Pakistani Urdu & Punjabi Dialects</h3>
+            <p>Natural conversational Lahori and Punjabi warmth ("Ji haan ji", "Bilkul ji", "Koi masla hi nahi ji") rather than rigid computer-generated English translations.</p>
+          </div>
+
+          <div class="cap-card">
+            <div class="cap-icon">🛡️</div>
+            <h3>Strict Zero-Hallucination Fallback</h3>
+            <p>Configure exactly what your agent says when an answer is not in your catalog. The agent never guesses, invents pricing, or hallucinates medical or legal advice.</p>
+          </div>
+
+          <div class="cap-card">
+            <div class="cap-icon">🧾</div>
+            <h3>Physical Paper Receipt Generation</h3>
+            <p>Generates authentic thermal paper receipts and documents for orders and bookings, complete with barcode verification, item breakdown, and official rubber stamps.</p>
+          </div>
+
+          <div class="cap-card">
+            <div class="cap-icon">🔍</div>
+            <h3>Multimodal OCR Verification</h3>
+            <p>Instant document inspection: upload or photograph customer receipts to extract line items, verify transaction amounts, and validate payment records.</p>
+          </div>
+
+          <div class="cap-card">
+            <div class="cap-icon">⚡</div>
+            <h3>Sub-100ms Inference Latency</h3>
+            <p>Powered by Groq LPU architecture and Web Audio API buffer scheduling for instant full-duplex live conversations with barge-in interruption.</p>
           </div>
         </div>
 
-        <div class="form-actions text-center">
-          <button type="button" id="btn-call-again" class="btn-primary">Call Again</button>
-          <a href="/dashboard" class="btn-secondary">Open Main Dashboard</a>
-        </div>
-      </section>
+      </div>
 
     </main>
+
   </div>
 
-  <script src="/static/live_demo.js?v=3.0"></script>
+  <script src="/static/live_demo.js?v=4.0"></script>
 </body>
 </html>
-

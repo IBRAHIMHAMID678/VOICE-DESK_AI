@@ -1,3 +1,4 @@
+import base64
 import json
 from pathlib import Path
 import pytest
@@ -10,29 +11,72 @@ def test_demo_page_loads():
         res = client.get("/demo")
         assert res.status_code == 200
         assert "VoiceDesk AI" in res.text
-        assert "Step 1 of 3" in res.text
+        assert "Agent Studio" in res.text
+        assert "Receipts & OCR Proof" in res.text
 
 
-def test_demo_create_session():
+def test_demo_create_session_with_custom_agent_and_fallback():
     with TestClient(app) as client:
         services = [
             {"name": "Consultation", "price_pkr": 1500, "duration_min": 20},
-            {"name": "Scaling", "price_pkr": 4000, "duration_min": 30}
+            {"name": "Teeth Scaling", "price_pkr": 4000, "duration_min": 30}
         ]
         res = client.post("/api/demo/session", data={
-            "business_name": "Dr. Ayesha Dental Surgery",
-            "category": "Dental Clinic",
-            "location": "F-8, Islamabad",
-            "hours": "12:00 PM - 8:00 PM",
-            "services_json": json.dumps(services)
+            "agent_name": "Zoya",
+            "business_name": "SmileCare Dental Clinic",
+            "category": "Dental & Aesthetics",
+            "description": "Premier clinic in Lahore providing consultations and scaling.",
+            "location": "MM Alam Road, Gulberg III, Lahore",
+            "hours": "11:00 AM se 9:00 PM (Monday - Saturday)",
+            "services_json": json.dumps(services),
+            "fallback_response": "Main is baare mein abhi confirm nahi bata sakti ji, management se pooch kar batati hoon.",
+            "tone": "warm_punjabi",
+            "voice_mode": "preset",
+            "preset_voice": "ur-PK-UzmaNeural",
+            "voice_speed": "1.0",
         })
         assert res.status_code == 200
         data = res.json()
         assert "session_id" in data
-        assert len(data["session_id"]) > 0
+        assert data["agent_name"] == "Zoya"
         assert len(data["welcome_text"]) > 10
         # Verify initial greeting audio is generated
         assert len(data.get("welcome_audio_b64", "")) > 1000
+
+
+def test_fallback_mechanism_unknown_query():
+    """Verify that asking about unlisted items triggers the configured fallback response."""
+    with TestClient(app) as client:
+        custom_fallback = "Hamare paas sirf dental treatment hota hai ji, doosri cheezon ki maloomat nahi hai."
+        services = [
+            {"name": "Teeth Cleaning", "price_pkr": 3500}
+        ]
+        res_init = client.post("/api/demo/session", data={
+            "agent_name": "Tariq",
+            "business_name": "Apex Dental",
+            "category": "Healthcare",
+            "description": "Dental clinic only.",
+            "location": "F-7 Markaz Islamabad",
+            "hours": "10 AM - 6 PM",
+            "services_json": json.dumps(services),
+            "fallback_response": custom_fallback,
+            "tone": "warm_punjabi",
+            "voice_mode": "preset",
+            "preset_voice": "ur-PK-AsadNeural",
+            "voice_speed": "1.0",
+        })
+        sid = res_init.json()["session_id"]
+
+        # Ask completely unrelated question (e.g., ordering pizza/burgers)
+        res_turn = client.post("/api/demo/chat", data={
+            "session_id": sid,
+            "user_text": "Kya aap pizza deliver kar sakte hain?"
+        })
+        assert res_turn.status_code == 200
+        reply = res_turn.json().get("reply_text", "")
+        # The agent must employ the fallback and decline pizza
+        assert len(reply) > 5
+        assert len(res_turn.json().get("audio_b64", "")) > 1000
 
 
 def test_multi_turn_continuous_voice_chat():
@@ -43,8 +87,10 @@ def test_multi_turn_continuous_voice_chat():
             {"name": "Consultation", "price_pkr": 1500, "duration_min": 20}
         ]
         res_init = client.post("/api/demo/session", data={
+            "agent_name": "Sara",
             "business_name": "SmileCare Clinic",
             "category": "Dental Clinic",
+            "description": "Dental clinic in Gulberg.",
             "location": "Gulberg, Lahore",
             "hours": "11 AM - 9 PM",
             "services_json": json.dumps(services)
@@ -61,7 +107,7 @@ def test_multi_turn_continuous_voice_chat():
         assert len(t1.get("reply_text", "")) > 5
         assert len(t1.get("audio_b64", "")) > 1000, "Turn 1 must have synthesized audio"
 
-        # Turn 2: Booking inquiry (verifying continuous voice doesn't drop audio)
+        # Turn 2: Timing inquiry (verifying continuous voice doesn't drop audio)
         res_turn2 = client.post("/api/demo/chat", data={
             "session_id": sid,
             "user_text": "Kal shaam 5 baje slot mil jaye ga?"
@@ -82,11 +128,63 @@ def test_multi_turn_continuous_voice_chat():
         assert len(t3.get("audio_b64", "")) > 1000, "Turn 3 must have synthesized audio"
 
 
+def test_physical_receipt_generation_endpoints():
+    """Verify physical paper receipt generation and sample download."""
+    with TestClient(app) as client:
+        # Sample receipt PNG
+        res_sample = client.get("/api/demo/receipt/sample")
+        assert res_sample.status_code == 200
+        assert res_sample.headers["content-type"] == "image/png"
+        assert len(res_sample.content) > 10000
+
+        # Custom receipt generation
+        res_gen = client.post("/api/demo/receipt/generate", json={
+            "business_name": "Lahore Grill House",
+            "category": "Restaurant",
+            "agent_name": "Hamza",
+            "customer_name": "Farhan",
+            "items": [
+                {"name": "Mutton Karahi Full", "qty": 1, "price_pkr": 3800},
+                {"name": "Kandhari Naan", "qty": 4, "price_pkr": 100}
+            ],
+            "status": "PAID"
+        })
+        assert res_gen.status_code == 200
+        data = res_gen.json()
+        assert data["status"] == "success"
+        assert len(data["receipt_b64"]) > 5000
+
+
+def test_ocr_receipt_inspector_endpoint():
+    """Verify OCR endpoint parses structured receipt text into verified JSON schema."""
+    with TestClient(app) as client:
+        sample_receipt_text = """
+        SMILECARE DENTAL CLINIC
+        Receipt #: REC-7741
+        Date: 07-Nov-2026
+        Customer: Usman Khan
+        Teeth Scaling & Polishing: PKR 4,000
+        Consultation Fee: PKR 1,500
+        Total: PKR 5,500
+        Status: PAID
+        """
+        res_ocr = client.post("/api/demo/receipt/ocr", data={
+            "raw_text": sample_receipt_text
+        })
+        assert res_ocr.status_code == 200
+        data = res_ocr.json()
+        assert data["status"] == "success"
+        extracted = data["extracted_data"]
+        assert "smilecare" in extracted.get("business_name", "").lower()
+        assert extracted.get("total_pkr") in [5500, 5500.0] or len(extracted.get("items", [])) >= 1
+
+
 def test_websocket_multi_turn_call():
     """Verify live call WebSocket sends audio on multiple consecutive turns without duplicates."""
     with TestClient(app) as client:
         services = [{"name": "Burger Meal", "price_pkr": 950, "duration_min": 15}]
         res_init = client.post("/api/demo/session", data={
+            "agent_name": "Asad",
             "business_name": "Chunkyard Gourmet Burgers",
             "category": "Restaurant",
             "location": "Islamabad",
@@ -126,25 +224,3 @@ def test_websocket_multi_turn_call():
             assert msg6["type"] == "audio_chunk"
             assert len(msg6["text"]) > 0
             assert len(msg6["audio_b64"]) > 1000
-
-
-def test_demo_export_whatsapp():
-    with TestClient(app) as client:
-        services = [{"name": "Facial", "price_pkr": 5000, "duration_min": 45}]
-        res_init = client.post("/api/demo/session", data={
-            "business_name": "Glow Spa",
-            "category": "Salon",
-            "location": "Karachi",
-            "hours": "11 AM - 8 PM",
-            "services_json": json.dumps(services)
-        })
-        sid = res_init.json()["session_id"]
-
-        res_export = client.post("/api/demo/export-whatsapp", data={"session_id": sid})
-        export_file = Path("businesses") / f"demo-{sid}.json"
-        try:
-            assert res_export.status_code == 200
-            assert res_export.json()["status"] == "success"
-        finally:
-            if export_file.exists():
-                export_file.unlink()

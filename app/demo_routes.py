@@ -1,11 +1,13 @@
-"""Interactive Live Demo Routes for Voice Receptionist.
+"""Dedicated Voice Agent Platform & Receipt Generation Routes.
 
-Provides:
-- GET /demo: Interactive responsive web UI (mobile & desktop)
-- POST /api/demo/session: Ingests 30s voice sample + business profile
-- POST /api/demo/chat: Fast REST conversation endpoint
-- WebSocket /ws/live-call/{session_id}: Real-time full-duplex live call room
-- POST /api/demo/export-whatsapp: One-click export to WhatsApp bot config
+Features:
+- GET /demo: Production-grade Voice Agent Studio & Live Call interface
+- POST /api/demo/session: Configures custom agent (name, business description, voice cloning/presets, zero-hallucination fallback rules)
+- POST /api/demo/chat: Turn-based conversational endpoint with automated physical receipt generation
+- WebSocket /ws/live-call/{session_id}: Full-duplex live audio call room with barge-in interruption
+- POST /api/demo/receipt/generate: Physical paper-style receipt generator (PNG & structured doc)
+- POST /api/demo/receipt/ocr: Multimodal OCR receipt verification inspector
+- GET /api/demo/receipt/sample: Pre-rendered sample receipts for instant testing
 """
 from __future__ import annotations
 
@@ -15,12 +17,14 @@ import logging
 import os
 import uuid
 from pathlib import Path
-from fastapi import APIRouter, File, Form, HTTPException, Request, UploadFile, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, File, Form, HTTPException, Request, Response, UploadFile, WebSocket, WebSocketDisconnect
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 
 from app import llm_service
 from app import voice_service
+from app import receipt_service
+from app import ocr_service
 
 log = logging.getLogger("demo_routes")
 
@@ -30,65 +34,129 @@ STATIC_DIR = Path(__file__).resolve().parent.parent / "static"
 BUSINESSES_DIR = Path(__file__).resolve().parent.parent / "businesses"
 templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
 
-# In-memory session store: session_id -> {profile, reference_audio_b64, history}
+# In-memory session store: session_id -> {profile, reference_bytes, reference_text, history, receipts}
 SESSIONS: dict[str, dict] = {}
 
 
 @router.get("/demo", response_class=HTMLResponse)
+@router.get("/", response_class=HTMLResponse)
 async def demo_page(request: Request):
-    """Render the responsive live voice agent demo page."""
+    """Render the dedicated Voice Agent Studio platform page."""
     return templates.TemplateResponse(request, "live_demo.html", {})
+
+
+def _normalize_confirmed_items(items, business_services):
+    """Ensure items list contains proper dicts with price_pkr mapped from business services."""
+    services = business_services or []
+    price_map = {}
+    for s in services:
+        if isinstance(s, dict):
+            s_name = s.get("name", "").strip().lower()
+            price_map[s_name] = int(s.get("price_pkr", 0))
+
+    default_price = services[0].get("price_pkr", 1500) if services and isinstance(services[0], dict) else 1500
+
+    normalized = []
+    raw_list = items if (items and len(items) > 0) else services[:2]
+    for it in raw_list:
+        if isinstance(it, str):
+            clean_name = it.strip()
+            # Try exact match or substring in service names
+            pkr = price_map.get(clean_name.lower())
+            if pkr is None:
+                for k, v in price_map.items():
+                    if k in clean_name.lower() or clean_name.lower() in k:
+                        pkr = v
+                        break
+            if pkr is None:
+                pkr = default_price
+            normalized.append({"name": clean_name, "qty": 1, "price_pkr": pkr})
+        elif isinstance(it, dict):
+            name = str(it.get("name") or it.get("item") or "Service Item")
+            qty = int(it.get("qty", 1))
+            pkr = it.get("price_pkr")
+            if pkr is None:
+                pkr = price_map.get(name.strip().lower(), default_price)
+            normalized.append({"name": name, "qty": qty, "price_pkr": int(pkr)})
+
+    return normalized or [{"name": "Appointment / Service", "qty": 1, "price_pkr": default_price}]
 
 
 @router.post("/api/demo/session")
 async def create_demo_session(
-    business_name: str = Form(...),
-    category: str = Form("General Business"),
+    agent_name: str = Form("Zoya"),
+    business_name: str = Form("Apex Services"),
+    category: str = Form("Consulting & Services"),
+    description: str = Form("Professional client service and consultations."),
     location: str = Form("Lahore, Pakistan"),
-    hours: str = Form("11:00 AM - 9:00 PM"),
+    hours: str = Form("10:00 AM se 9:00 PM (Monday - Saturday)"),
     services_json: str = Form("[]"),
+    fallback_response: str = Form("Main is baare mein abhi confirm nahi bata sakti ji, main management se pooch kar aap ko update karti hoon."),
+    tone: str = Form("warm_punjabi"),
+    voice_mode: str = Form("preset"),
+    preset_voice: str = Form("ur-PK-UzmaNeural"),
+    voice_speed: float = Form(1.0),
     voice_file: UploadFile | None = File(None),
 ):
-    """Initialize a live demo session with business info and optional 30s voice sample."""
+    """Initialize a dedicated custom voice agent session."""
     session_id = str(uuid.uuid4())[:8]
 
     try:
         services = json.loads(services_json)
     except Exception:
-        services = [
-            {"name": "Consultation", "price_pkr": 1500, "duration_min": 30}
-        ]
+        services = [{"name": "Consultation", "price_pkr": 1500, "duration_min": 30}]
 
     profile = {
-        "id": f"demo-{session_id}",
+        "id": f"agent-{session_id}",
+        "agent_name": agent_name.strip() or "Representative",
         "name": business_name.strip(),
         "category": category.strip(),
+        "description": description.strip(),
         "location": location.strip(),
         "hours": hours.strip(),
         "services": services,
-        "receptionist_name": "Ayesha",
+        "fallback_response": fallback_response.strip(),
+        "tone": tone,
+        "voice_mode": voice_mode,
+        "preset_voice": preset_voice,
+        "voice_speed": float(voice_speed),
     }
 
     reference_bytes = None
-    if voice_file:
+    reference_text = None
+
+    if voice_file and voice_mode == "clone":
         raw_content = await voice_file.read()
         if len(raw_content) > 1000:
             reference_bytes = voice_service.sanitize_audio_to_mp3(raw_content)
-            log.info("Sanitized reference audio for session %s (%d bytes -> %d bytes)", session_id, len(raw_content), len(reference_bytes))
+            # Transcribe the user's reference speech with Groq Whisper for 100% accurate alignment
+            reference_text = await voice_service.transcribe_reference_audio(reference_bytes)
+            log.info(
+                "Voice sample ingested for session %s (%d bytes -> %d bytes, transcript: %s)",
+                session_id,
+                len(raw_content),
+                len(reference_bytes),
+                reference_text[:40],
+            )
 
     SESSIONS[session_id] = {
         "profile": profile,
         "reference_bytes": reference_bytes,
+        "reference_text": reference_text,
         "history": [],
+        "receipts": [],
     }
 
-    # Generate initial dynamic personalized greeting
+    # Generate personalized dynamic greeting
     welcome_roman, welcome_urdu = await llm_service.generate_dynamic_greeting(profile)
 
+    # Synthesize opening greeting
     audio_bytes = await voice_service.synthesize_speech(
-        welcome_urdu,
+        text=welcome_urdu,
         reference_audio_bytes=reference_bytes,
-        reference_text="سلام! ہماری کلینک لاہور میں ہے۔ ہم چیک اپ اور اسکیلنگ کی سہولت دیتے ہیں۔",
+        reference_text=reference_text,
+        fallback_voice=preset_voice,
+        speed=voice_speed,
     )
     audio_b64 = base64.b64encode(audio_bytes).decode("utf-8") if audio_bytes else ""
 
@@ -96,9 +164,12 @@ async def create_demo_session(
 
     return {
         "session_id": session_id,
+        "agent_name": profile["agent_name"],
         "welcome_text": welcome_roman,
         "welcome_audio_b64": audio_b64,
         "has_custom_voice": bool(reference_bytes),
+        "voice_mode": voice_mode,
+        "voice_label": "Zero-Shot Cloned Voice" if reference_bytes else f"Studio {preset_voice}",
     }
 
 
@@ -107,37 +178,63 @@ async def demo_chat(
     session_id: str = Form(...),
     user_text: str = Form(...),
 ):
-    """Fast turn-based endpoint for testing speech text and audio."""
+    """Turn-based conversational chat with automatic physical receipt generation."""
     session = SESSIONS.get(session_id)
     if not session:
         raise HTTPException(status_code=404, detail="Session expired or not found")
 
     user_text = user_text.strip()
     if not user_text:
-        return {"reply_text": "", "audio_b64": ""}
+        return {"reply_text": "", "audio_b64": "", "receipt": None}
 
     session["history"].append({"role": "user", "content": user_text})
 
-    # Keep last 8 turns for conversational context
+    # Context history
     context = session["history"][-8:]
-    reply_roman, reply_urdu = await llm_service.generate_response(context, session["profile"])
+    p = session["profile"]
+    reply_roman, reply_urdu, meta = await llm_service.generate_response(context, p)
     session["history"].append({"role": "assistant", "content": reply_roman})
 
+    # Synthesize speech
     audio_bytes = await voice_service.synthesize_speech(
-        reply_urdu,
+        text=reply_urdu,
         reference_audio_bytes=session.get("reference_bytes"),
+        reference_text=session.get("reference_text"),
+        fallback_voice=p.get("preset_voice", "ur-PK-UzmaNeural"),
+        speed=p.get("voice_speed", 1.0),
     )
     audio_b64 = base64.b64encode(audio_bytes).decode("utf-8") if audio_bytes else ""
+
+    # Receipt generation if order/booking was confirmed
+    receipt_data = None
+    receipt_b64 = ""
+    if meta.get("booking_confirmed"):
+        items = _normalize_confirmed_items(meta.get("confirmed_items"), p.get("services", []))
+        receipt_dict = {
+            "business_name": p["name"],
+            "category": p["category"],
+            "location": p["location"],
+            "agent_name": p["agent_name"],
+            "customer_name": "Caller",
+            "items": items,
+            "status": "BOOKING CONFIRMED",
+        }
+        receipt_b64 = receipt_service.receipt_to_base64(receipt_dict)
+        receipt_data = receipt_dict
+        session["receipts"].append(receipt_dict)
 
     return {
         "reply_text": reply_roman,
         "audio_b64": audio_b64,
+        "receipt_b64": receipt_b64,
+        "receipt_data": receipt_data,
+        "metadata": meta,
     }
 
 
 @router.websocket("/ws/live-call/{session_id}")
 async def live_call_websocket(websocket: WebSocket, session_id: str):
-    """Live full-duplex phone call over WebSocket with interruption support."""
+    """Full-duplex phone call over WebSocket with continuous multi-turn voice and physical receipts."""
     await websocket.accept()
     session = SESSIONS.get(session_id)
     if not session:
@@ -145,7 +242,9 @@ async def live_call_websocket(websocket: WebSocket, session_id: str):
         await websocket.close()
         return
 
-    log.info("WebSocket live call connected for session %s", session_id)
+    p = session["profile"]
+    log.info("WebSocket live call connected for agent '%s' (session %s)", p["agent_name"], session_id)
+
     try:
         while True:
             data = await websocket.receive_json()
@@ -159,9 +258,9 @@ async def live_call_websocket(websocket: WebSocket, session_id: str):
                 await websocket.send_json({"type": "state", "status": "thinking"})
                 session["history"].append({"role": "user", "content": user_text})
 
-                # Generate reply
+                # Keep last 8 turns for context
                 context = session["history"][-8:]
-                reply_roman, reply_urdu = await llm_service.generate_response(context, session["profile"])
+                reply_roman, reply_urdu, meta = await llm_service.generate_response(context, p)
                 session["history"].append({"role": "assistant", "content": reply_roman})
 
                 await websocket.send_json({
@@ -170,10 +269,13 @@ async def live_call_websocket(websocket: WebSocket, session_id: str):
                     "text": reply_roman,
                 })
 
-                # Synthesize cloned audio using native Urdu phonemes
+                # Synthesize audio (guaranteed non-empty via resilient fallback)
                 audio_bytes = await voice_service.synthesize_speech(
-                    reply_urdu,
+                    text=reply_urdu,
                     reference_audio_bytes=session.get("reference_bytes"),
+                    reference_text=session.get("reference_text"),
+                    fallback_voice=p.get("preset_voice", "ur-PK-UzmaNeural"),
+                    speed=p.get("voice_speed", 1.0),
                 )
                 audio_b64 = base64.b64encode(audio_bytes).decode("utf-8") if audio_bytes else ""
 
@@ -183,8 +285,28 @@ async def live_call_websocket(websocket: WebSocket, session_id: str):
                     "audio_b64": audio_b64,
                 })
 
+                # Check if booking / order was confirmed
+                if meta.get("booking_confirmed"):
+                    items = _normalize_confirmed_items(meta.get("confirmed_items"), p.get("services", []))
+                    receipt_dict = {
+                        "business_name": p["name"],
+                        "category": p["category"],
+                        "location": p["location"],
+                        "agent_name": p["agent_name"],
+                        "customer_name": "Customer",
+                        "items": items,
+                        "status": "BOOKING CONFIRMED",
+                    }
+                    r_b64 = receipt_service.receipt_to_base64(receipt_dict)
+                    session["receipts"].append(receipt_dict)
+
+                    await websocket.send_json({
+                        "type": "receipt_generated",
+                        "receipt_b64": r_b64,
+                        "receipt_data": receipt_dict,
+                    })
+
             elif msg_type == "interruption":
-                # Caller interrupted while AI was speaking; acknowledge immediately
                 await websocket.send_json({"type": "stop_audio"})
 
             elif msg_type == "ping":
@@ -196,56 +318,77 @@ async def live_call_websocket(websocket: WebSocket, session_id: str):
         log.warning("WebSocket error in session %s: %s", session_id, e)
 
 
-@router.post("/api/demo/export-whatsapp")
-async def export_to_whatsapp(session_id: str = Form(...)):
-    """Convert demo profile into permanent businesses/<id>.json file."""
-    session = SESSIONS.get(session_id)
-    if not session:
-        raise HTTPException(status_code=404, detail="Session not found")
+@router.post("/api/demo/receipt/generate")
+async def generate_receipt_endpoint(request: Request):
+    """Generate physical paper receipt from JSON payload."""
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
 
-    p = session["profile"]
-    business_id = p["id"]
-    filepath = BUSINESSES_DIR / f"{business_id}.json"
-
-    export_data = {
-        "id": business_id,
-        "name": p["name"],
-        "city": p["location"],
-        "default_language": "roman_urdu",
-        "services": [
-            {
-                "name": s["name"],
-                "price_pkr": s.get("price_pkr", 1500),
-                "duration_min": s.get("duration_min", 30),
-                "keywords": [w.lower() for w in s["name"].split()],
-            }
-            for s in p["services"]
-        ],
-        "hours": {
-            "mon": {"open": "11:00", "close": "21:00"},
-            "tue": {"open": "11:00", "close": "21:00"},
-            "wed": {"open": "11:00", "close": "21:00"},
-            "thu": {"open": "11:00", "close": "21:00"},
-            "fri": {"open": "14:00", "close": "21:00"},
-            "sat": {"open": "11:00", "close": "21:00"},
-            "sun": "closed",
-        },
-        "location": p["location"],
-        "faqs": [
-            {
-                "q": "Appointment kaise book karein?",
-                "a": "Bas humein yahan WhatsApp par apna pasandeeda din aur waqt batayein.",
-            }
-        ],
-        "booking": {
-            "slot_minutes": 30,
-            "max_advance_days": 14,
-            "require_name_phone": True,
-        },
-        "after_hours_message": "Hamara clinic is waqt band hai. Kal subah 11 baje open hoga.",
-        "owner_phone": "+923001234567",
-        "tts_voice": "ur-PK-UzmaNeural",
+    receipt_dict = {
+        "business_name": body.get("business_name", "Lahore Biryani & Grill"),
+        "category": body.get("category", "Restaurant & Dining"),
+        "location": body.get("location", "Gulberg III, Lahore"),
+        "phone": body.get("phone", "+92 42 35789123"),
+        "agent_name": body.get("agent_name", "Zoya"),
+        "customer_name": body.get("customer_name", "Walk-in Guest"),
+        "customer_phone": body.get("customer_phone", "0300-1234567"),
+        "booking_time": body.get("booking_time", "Today, 8:00 PM"),
+        "items": body.get("items", [
+            {"name": "Special Service Order", "qty": 1, "price_pkr": 1500}
+        ]),
+        "status": body.get("status", "CONFIRMED"),
     }
 
-    filepath.write_text(json.dumps(export_data, indent=2, ensure_ascii=False), encoding="utf-8")
-    return {"status": "success", "file": str(filepath.name), "business_id": business_id}
+    raw_png = receipt_service.generate_physical_receipt_image(receipt_dict)
+    r_b64 = base64.b64encode(raw_png).decode("utf-8")
+
+    return {
+        "status": "success",
+        "receipt_b64": r_b64,
+        "receipt_data": receipt_dict,
+    }
+
+
+@router.post("/api/demo/receipt/ocr")
+async def ocr_receipt_endpoint(
+    image_file: UploadFile | None = File(None),
+    raw_text: str = Form(""),
+):
+    """OCR Document inspector endpoint for receipts and invoices."""
+    if image_file:
+        content = await image_file.read()
+        if len(content) > 100:
+            result = await ocr_service.parse_receipt_image(content)
+            return {"status": "success", "extracted_data": result}
+
+    if raw_text:
+        result = await ocr_service.parse_receipt_text_to_json(raw_text)
+        return {"status": "success", "extracted_data": result}
+
+    return {"status": "error", "message": "No image or text provided for OCR"}
+
+
+@router.get("/api/demo/receipt/sample")
+async def get_sample_receipt():
+    """Provides a ready-to-inspect physical paper receipt."""
+    sample = {
+        "business_name": "Lahore Biryani House",
+        "category": "Restaurant & Dining",
+        "location": "Gulberg, Lahore",
+        "phone": "+92 42 35789123",
+        "agent_name": "Tariq",
+        "customer_name": "Usman Malik",
+        "customer_phone": "0321-9876543",
+        "booking_time": "Today, 8:30 PM (Dine-in)",
+        "items": [
+            {"name": "Special Chicken Biryani", "qty": 2, "price_pkr": 750},
+            {"name": "Chicken Karahi (Half)", "qty": 1, "price_pkr": 1850},
+            {"name": "Fresh Roghni Naan", "qty": 4, "price_pkr": 120},
+            {"name": "Raita & Fresh Salad", "qty": 2, "price_pkr": 150}
+        ],
+        "status": "PAID"
+    }
+    raw_png = receipt_service.generate_physical_receipt_image(sample)
+    return Response(content=raw_png, media_type="image/png")
