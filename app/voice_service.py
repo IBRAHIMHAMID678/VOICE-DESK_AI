@@ -44,6 +44,7 @@ _MEM_CACHE: dict[str, bytes] = {}
 
 # Common English loanwords used in Pakistani business speech mapped to Urdu phonetics
 LOANWORDS_URDU_MAP = {
+    # Medical & Clinic
     "appointment": "اپائنٹمنٹ",
     "appointments": "اپائنٹمنٹس",
     "booking": "بکنگ",
@@ -53,6 +54,7 @@ LOANWORDS_URDU_MAP = {
     "consultation": "کنسلٹیشن",
     "clinic": "کلینک",
     "doctor": "ڈاکٹر",
+    "dr": "ڈاکٹر",
     "slot": "سلاٹ",
     "confirm": "کنفرم",
     "confirmed": "کنفرم",
@@ -68,7 +70,124 @@ LOANWORDS_URDU_MAP = {
     "pkr": "روپے",
     "am": "صبح",
     "pm": "شام",
+    "smilecare": "سمائل کیئر",
+    "dental": "ڈینٹل",
+    "scaling": "اسکیلنگ",
+    "polishing": "پالشنگ",
+    "whitening": "وائٹننگ",
+    "laser": "لیزر",
+    "treatment": "ٹریٹمنٹ",
+    "patient": "مریض",
+    "filling": "فلنگ",
+    "extraction": "دانت نکالنا",
+    "braces": "بریسز",
+    "root": "روٹ",
+    "canal": "کینال",
+    "teeth": "دانت",
+    "tooth": "دانت",
+    "cleaning": "کلیننگ",
+    # Names
+    "zoya": "زویا",
+    "sara": "سارہ",
+    "aisha": "عائشہ",
+    "fatima": "فاطمہ",
+    "mariam": "مریم",
+    "hira": "حرا",
+    "sana": "ثنا",
+    "mehwish": "مہوش",
+    "asad": "اسد",
+    "ali": "علی",
+    "tariq": "طارق",
+    "hamza": "حمزہ",
+    "usman": "عثمان",
+    "bilal": "بلال",
+    "ahmed": "احمد",
+    "omar": "عمر",
+    "hassan": "حسن",
+    "apex": "ایپکس",
+    # Food & Restaurant
+    "burger": "برگر",
+    "pizza": "پیزا",
+    "karahi": "کڑاہی",
+    "handi": "ہانڈی",
+    "biryani": "بریانی",
+    "pulao": "پلاؤ",
+    "naan": "نان",
+    "roghni": "روغنی",
+    "roti": "روٹی",
+    "kabab": "کباب",
+    "tikka": "ٹکہ",
+    "broast": "بروسٹ",
+    "fries": "فرائز",
+    "drink": "ڈرنک",
+    "order": "آرڈر",
+    "delivery": "ڈلیوری",
+    "takeaway": "ٹیک اوے",
+    "deal": "ڈیل",
+    "platter": "پلیٹر",
+    "special": "اسپیشل",
+    # Locations
+    "lahore": "لاہور",
+    "karachi": "کراچی",
+    "islamabad": "اسلام آباد",
+    "rawalpindi": "راولپنڈی",
+    "multan": "ملتان",
+    "peshawar": "پشاور",
+    "faisalabad": "فیصل آباد",
+    "gulberg": "گلبرگ",
+    "dha": "ڈی ایچ اے",
+    "johar": "جوہر",
+    "town": "ٹاؤن",
+    "road": "روڈ",
+    "mall": "مال",
 }
+
+NUMBERS_URDU_MAP = {
+    "1": "ایک", "2": "دو", "3": "تین", "4": "چار", "5": "پانچ",
+    "6": "چھ", "7": "سات", "8": "آٹھ", "9": "نو", "10": "دس",
+    "11": "گیارہ", "12": "بارہ", "15": "پندرہ", "20": "بیس", "25": "پچیس",
+    "30": "تیس", "40": "چالیس", "45": "پینتالیس", "50": "پچاس", "60": "ساٹھ",
+    "500": "پانچ سو", "1000": "ایک ہزار", "1200": "بارہ سو", "1500": "پندرہ سو",
+    "2000": "دو ہزار", "2500": "پچیس سو", "3000": "تین ہزار", "3500": "پینتیس سو",
+    "4000": "چار ہزار", "5000": "پانچ ہزار", "6000": "چھ ہزار", "7000": "سات ہزار",
+    "8000": "آٹھ ہزار", "9000": "نو ہزار", "10000": "دس ہزار", "12000": "بارہ ہزار",
+    "15000": "پندرہ ہزار", "20000": "بیس ہزار", "25000": "پچیس ہزار", "50000": "پچاس ہزار"
+}
+
+PHONETIC_PAIRS = [
+    ("sh", "ش"), ("kh", "خ"), ("gh", "غ"), ("ch", "چ"), ("th", "تھ"), ("ph", "پھ"),
+    ("bh", "بھ"), ("dh", "دھ"), ("jh", "جھ"), ("oo", "و"), ("ee", "ی"), ("aa", "ا"),
+    ("ai", "ائے"), ("ay", "ے"), ("ei", "ی"), ("ou", "اؤ"), ("ck", "ک"),
+    ("b", "ب"), ("p", "پ"), ("t", "ٹ"), ("s", "س"), ("j", "ج"),
+    ("c", "ک"), ("k", "ک"), ("q", "ق"), ("r", "ر"), ("z", "ز"),
+    ("x", "ایکس"), ("d", "ڈ"), ("f", "ف"), ("g", "گ"), ("l", "ل"),
+    ("m", "م"), ("n", "ن"), ("v", "و"), ("w", "و"), ("h", "ہ"),
+    ("y", "ی"), ("a", "ا"), ("e", "ے"), ("i", "ی"), ("o", "و"), ("u", "و")
+]
+
+
+def transliterate_latin_word(word: str) -> str:
+    """Phonetically converts arbitrary English Latin words into authentic Urdu script."""
+    w = word.lower().strip()
+    if not w:
+        return ""
+    if w in LOANWORDS_URDU_MAP:
+        return LOANWORDS_URDU_MAP[w]
+    if w in ROMAN_TO_URDU_LEXICON:
+        return ROMAN_TO_URDU_LEXICON[w]
+    res = ""
+    i = 0
+    while i < len(w):
+        matched = False
+        for latin, urdu in PHONETIC_PAIRS:
+            if w[i:].startswith(latin):
+                res += urdu
+                i += len(latin)
+                matched = True
+                break
+        if not matched:
+            i += 1
+    return res
 
 # Roman Urdu to native Urdu script dictionary for phonetically accurate TTS synthesis
 ROMAN_TO_URDU_LEXICON = {
@@ -148,24 +267,33 @@ ROMAN_TO_URDU_LEXICON = {
 
 
 def normalize_urdu_phonetics_for_tts(text: str) -> str:
-    """Ensures text fed to TTS engines uses native Urdu phonemes and script.
+    """Ensures text fed to TTS engines uses 100% native Urdu phonemes and script.
 
-    If text has Latin characters, maps them to Urdu phonemes to avoid American accent.
+    Guarantees ZERO Latin English characters (A-Z, a-z) reach the speech synthesizer,
+    permanently eliminating the English/American phonetic accent.
     """
     if not text:
         return ""
 
+    # 1. Convert any standalone numerical digits into Urdu script words
+    def replace_num(m):
+        n = m.group(0)
+        return NUMBERS_URDU_MAP.get(n, n)
+
+    text = re.sub(r"\b\d+\b", replace_num, text)
+
+    # 2. Check if text already has Urdu characters
     has_urdu = bool(re.search(r"[\u0600-\u06FF]", text))
 
     if has_urdu:
-        # Text is in Urdu script; replace any raw English loanwords with Urdu phonetic equivalents
+        # Replace all Latin English words with their exact Urdu transliteration
         def replace_loanword(m):
-            w = m.group(0).lower()
-            return LOANWORDS_URDU_MAP.get(w, m.group(0))
+            return transliterate_latin_word(m.group(0))
 
-        return re.sub(r"\b[A-Za-z]+\b", replace_loanword, text)
+        clean_text = re.sub(r"[A-Za-z]+", replace_loanword, text)
+        return re.sub(r"\s+", " ", clean_text).strip()
 
-    # Pure Roman Urdu: map word-by-word into authentic Urdu script
+    # 3. Pure Roman Urdu: convert word-by-word into authentic Urdu Nastaliq script
     tokens = re.findall(r"[\w\'-]+|[^\w\s]", text, re.UNICODE)
     converted: list[str] = []
     for tok in tokens:
@@ -175,11 +303,16 @@ def normalize_urdu_phonetics_for_tts(text: str) -> str:
         elif low in ROMAN_TO_URDU_LEXICON:
             converted.append(ROMAN_TO_URDU_LEXICON[low])
         elif tok.isdigit():
-            converted.append(tok)
+            converted.append(NUMBERS_URDU_MAP.get(tok, tok))
+        elif re.match(r"^[A-Za-z]+$", tok):
+            converted.append(transliterate_latin_word(tok))
         else:
             converted.append(tok)
 
-    return " ".join(converted)
+    result = " ".join(converted)
+    # Final pass to catch any stray Latin characters
+    result = re.sub(r"[A-Za-z]+", lambda m: transliterate_latin_word(m.group(0)), result)
+    return re.sub(r"\s+", " ", result).strip()
 
 
 def sanitize_audio_to_mp3(raw_bytes: bytes) -> bytes:
@@ -222,7 +355,7 @@ async def transcribe_reference_audio(audio_bytes: bytes) -> str:
     try:
         headers = {"Authorization": f"Bearer {GROQ_API_KEY}"}
         files = {"file": ("reference.mp3", audio_bytes, "audio/mpeg")}
-        data = {"model": "whisper-large-v3-turbo"}
+        data = {"model": "whisper-large-v3-turbo", "language": "ur"}
         async with httpx.AsyncClient(timeout=8.0) as client:
             res = await client.post(
                 "https://api.groq.com/openai/v1/audio/transcriptions",

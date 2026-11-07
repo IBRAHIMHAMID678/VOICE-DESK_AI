@@ -102,7 +102,7 @@ CRITICAL PERSONA & LANGUAGE RULES:
 5. STRICT JSON OUTPUT FORMAT (always provide both keys):
    {{
      "roman_urdu": "Natural everyday Roman Urdu for the screen (e.g. Ji haan ji bilkul, kal shaam 5 baje ka slot available hai. Main aap ki booking confirm kar doon?)",
-     "urdu_script": "Same reply in authentic Urdu script for native Pakistani voice synthesis (e.g. جی ہاں جی بالکل، کل شام پانچ بجے کا سلاٹ اویلیبل ہے۔ میں آپ کی بکنگ کنفرم کر دوں؟)",
+     "urdu_script": "Same reply in 100% PURE Urdu Nastaliq script for authentic Pakistani speech synthesis. NEVER include ANY English Latin letters (A-Z, a-z). Transliterate all brand names, services, and numbers directly into Urdu script (e.g. سمائل کیئر for SmileCare, زویا for Zoya, اسکیلنگ for Scaling, پانچ بجے for 5 PM).",
      "booking_confirmed": false,
      "confirmed_items": []
    }}
@@ -112,6 +112,8 @@ CRITICAL PERSONA & LANGUAGE RULES:
 
 def _parse_bilingual_response(raw_text: str) -> tuple[str, str, dict]:
     """Parse JSON or fallback to text, returning (roman_urdu, urdu_script, metadata)."""
+    from app.voice_service import normalize_urdu_phonetics_for_tts
+
     raw_text = raw_text.strip()
     try:
         match = re.search(r"\{.*\}", raw_text, re.DOTALL)
@@ -120,10 +122,12 @@ def _parse_bilingual_response(raw_text: str) -> tuple[str, str, dict]:
             roman = data.get("roman_urdu", "").strip()
             urdu = data.get("urdu_script", "").strip()
             if roman:
-                return roman, urdu or roman, data
+                pure_urdu = normalize_urdu_phonetics_for_tts(urdu or roman)
+                return roman, pure_urdu, data
     except Exception:
         pass
-    return raw_text, raw_text, {}
+    pure_fallback = normalize_urdu_phonetics_for_tts(raw_text)
+    return raw_text, pure_fallback, {}
 
 
 async def generate_dynamic_greeting(profile: dict) -> tuple[str, str]:
@@ -133,14 +137,20 @@ async def generate_dynamic_greeting(profile: dict) -> tuple[str, str]:
     category = profile.get("category", "Clinic")
     location = profile.get("location", "Lahore")
 
+    # Transliterate business name and agent name to pure Urdu script to prevent American TTS accent
+    from app.voice_service import normalize_urdu_phonetics_for_tts
+    biz_urdu = normalize_urdu_phonetics_for_tts(biz_name)
+    agent_urdu = normalize_urdu_phonetics_for_tts(agent_name)
+
     prompt = f"""Generate a warm, natural 1-sentence Pakistani phone greeting from {agent_name} for "{biz_name}" ({category}) in {location}.
 Rules:
 - NEVER say "Khushamdeed" or "Welcome". Real Pakistanis say: "Assalam-o-Alaikum ji! [Biz], [Name] baat kar rahi hoon. Ji batayein, kya madad kar sakti hoon?"
 - Keep it under 18 words.
+- In "urdu_script", write the business name as "{biz_urdu}" and agent name as "{agent_urdu}". Absolutely ZERO Latin letters (A-Z) allowed in urdu_script.
 Output JSON:
 {{
   "roman_urdu": "Assalam-o-Alaikum ji! {biz_name} se {agent_name} baat kar rahi hoon. Ji batayein, kis cheez mein help chahiye?",
-  "urdu_script": "السلام علیکم جی! {biz_name} سے {agent_name} بات کر رہی ہوں۔ جی بتائیں، کس چیز میں مدد چاہیے؟"
+  "urdu_script": "السلام علیکم جی! {biz_urdu} سے {agent_urdu} بات کر رہی ہوں۔ جی بتائیں، کس چیز میں مدد چاہیے؟"
 }}"""
 
     if GROQ_API_KEY:
@@ -163,13 +173,15 @@ Output JSON:
                     content = data["choices"][0]["message"]["content"]
                     r, u, _ = _parse_bilingual_response(content)
                     if r and "khush" not in r.lower():
-                        return r, u
+                        # Enforce pure Urdu script on u
+                        u_pure = normalize_urdu_phonetics_for_tts(u)
+                        return r, u_pure
         except Exception as e:
             log.warning("Dynamic greeting LLM failed: %s", e)
 
-    # Authentic everyday Pakistani phone greeting fallback
+    # Authentic everyday Pakistani phone greeting fallback with pure Urdu script
     r = f"Assalam-o-Alaikum ji! {biz_name} se {agent_name} baat kar rahi hoon. Ji batayein, kis cheez mein help chahiye?"
-    u = f"السلام علیکم جی! {biz_name} سے {agent_name} بات کر رہی ہوں۔ جی بتائیں، کس چیز میں مدد چاہیے؟"
+    u = f"السلام علیکم جی! {biz_urdu} سے {agent_urdu} بات کر رہی ہوں۔ جی بتائیں، کس چیز میں مدد چاہیے؟"
     return r, u
 
 
