@@ -38,7 +38,8 @@ def test_parse_garbage_never_raises(payload):
     assert whatsapp.parse_webhook_payload(payload or {}) == []
 
 
-def test_webhook_post_garbage_json_returns_200():
+def test_webhook_post_garbage_json_returns_200(monkeypatch):
+    monkeypatch.delenv("WHATSAPP_APP_SECRET", raising=False)
     with TestClient(app) as client:
         r = client.post("/webhook", content=b"{not json",
                         headers={"Content-Type": "application/json"})
@@ -46,7 +47,8 @@ def test_webhook_post_garbage_json_returns_200():
         assert r.json() == {"ok": True}
 
 
-def test_webhook_post_empty_body_returns_200():
+def test_webhook_post_empty_body_returns_200(monkeypatch):
+    monkeypatch.delenv("WHATSAPP_APP_SECRET", raising=False)
     with TestClient(app) as client:
         r = client.post("/webhook", content=b"")
         assert r.status_code == 200

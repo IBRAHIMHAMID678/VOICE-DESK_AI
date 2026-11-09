@@ -57,7 +57,13 @@ def build_system_prompt(profile: dict) -> str:
 
     services_text = ""
     for s in services:
-        services_text += f"- {s.get('name')}: Rs {s.get('price_pkr', 1500)} ({s.get('duration_min', 30)} mins)\n"
+        name = s.get("name", "").strip()
+        pkr = s.get("price_pkr")
+        dur = s.get("duration_min")
+        if name:
+            price_str = f"Rs {pkr}" if (pkr is not None and str(pkr).isdigit() and int(pkr) > 0) else "Price on inquiry"
+            dur_str = f" ({dur} mins)" if dur else ""
+            services_text += f"- {name}: {price_str}{dur_str}\n"
 
     tone_instruction = """
 - Tone: Warm, hospitable Pakistani everyday conversational style (e.g. 'Ji haan ji', 'Bilkul ji', 'Koi masla hi nahi ji', 'Aap tashreef le aayein', 'Fikar na karein ji').
@@ -85,7 +91,7 @@ OPERATING HOURS:
 {hours}
 
 OUR VERIFIED SERVICES & PRICING (PKR):
-{services_text if services_text else "- General Consultation & Services: Rs 1,500"}
+{services_text if services_text else "No specific services or prices configured. If asked about unlisted items or services, use the exact fallback response."}
 
 CRITICAL PERSONA & LANGUAGE RULES:
 1. Spoken Language & Dialect:

@@ -1,8 +1,9 @@
 # VoiceDesk AI — Authentic Pakistani Urdu Voice AI Receptionist & Business Automation Platform
 
-[![Tests](https://img.shields.io/badge/pytest-11%20passed-emerald)](tests/)
+[![Tests](https://img.shields.io/badge/pytest-21%20passed-emerald)](tests/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.141.1-009688)](https://fastapi.tiangolo.com)
-[![Voice Models](https://img.shields.io/badge/Voices-Aiza%20%7C%20Uzma%20%7C%20Asad%20%7C%20Cloned-blue)]()
+[![Voice Models](https://img.shields.io/badge/Voices-s2.1--pro--free%20%7C%20Uzma%20%7C%20Asad%20%7C%20User%20Voice%20Clone-blue)]()
+[![QA Report](https://img.shields.io/badge/Evaluation%20Report-VOICE__QA__REPORT.md-purple)](VOICE_QA_REPORT.md)
 [![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 **VoiceDesk AI** is an enterprise-grade AI voice receptionist and multichannel customer interaction platform built specifically for Pakistani businesses (Clinics, Restaurants, Salons, Real Estate, Retail, and Customer Support). 
@@ -56,24 +57,28 @@ It answers customer inquiries, schedules appointments, takes itemized orders, pr
   * **Polite Corporate Urdu**: Professional, courteous business tone.
   * **Urban Bilingual**: Natural code-switching between Urdu and standard English loanwords.
 
-### 2. Native Pakistani Voice Architecture
-| Voice Option | Engine | Accent / Profile | Role |
-| :--- | :--- | :--- | :--- |
-| **Aiza (عائزہ)** | Fish Audio (`cdd7d48d6038403199a3085b4e09547e`) | Soft, warm, conversational Lahori female | Direct studio preset + Voice cloning accent anchor |
-| **Uzma (عظمیٰ)** | Microsoft Neural (`ur-PK-UzmaNeural`) | Respectful, professional Lahori female | Clinic, hospital, and hospitality receptionist |
-| **Asad (اسد)** | Microsoft Neural (`ur-PK-AsadNeural`) | Crisp, confident Islamabad male | Orders, consultations, and corporate coordinator |
-| **Zero-Shot Clone** | Fish Audio (Aiza Anchored) | User's vocal timbre + Native Lahori phonetics | Personalized business owner voice with native accent |
+### 2. Native Pakistani Voice Architecture & Zero-Shot Cloning
+| Voice Option | Engine | Accent / Profile | Role | Tier & Pricing |
+| :--- | :--- | :--- | :--- | :--- |
+| **User Voice Clone** | Fish Audio (`s2.1-pro-free`) | User's vocal timbre, pitch & natural rhythm | Authentic personalized voice from user mic recording or uploaded audio | 100% Free ($0.00 / 1M UTF-8 bytes) |
+| **Uzma (عظمیٰ)** | Microsoft Neural (`ur-PK-UzmaNeural`) | Respectful, professional Pakistani female | Clinic, hospital, and hospitality receptionist preset | 100% Free Edge-TTS |
+| **Asad (اسد)** | Microsoft Neural (`ur-PK-AsadNeural`) | Crisp, confident Islamabad male | Orders, consultations, and corporate coordinator preset | 100% Free Edge-TTS |
+| **Aiza (عائزہ)** | Fish Audio Preset (`cdd7d48d6038403199a3085b4e09547e`) | Soft, warm conversational Lahori female | Isolated experimental studio preset | Free / Community |
 
 ### 3. Pure Urdu Nastaliq Phonetic Normalizer (Zero American Accent)
-* **The Root Cause**: Foreign TTS engines switch to American English pronunciation when encountering Latin/English letters (e.g. `SmileCare`, `Zoya`, `Scaling`, `4000`).
+* **The Root Cause**: Foreign TTS engines switch to American English pronunciation when encountering Latin/English letters (e.g. `SmileCare`, `Zoya`, `Scaling`, `4000`, `WhatsApp`).
 * **The Normalizer (`app/voice_service.py`)**:
-  * Transliterates 150+ business loanwords: `SmileCare` $\rightarrow$ `سمائل کیئر`, `Dental` $\rightarrow$ `ڈینٹل`, `Scaling` $\rightarrow$ `اسکیلنگ`, `Timing` $\rightarrow$ `ٹائمنگ`.
+  * Transliterates 160+ business loanwords: `SmileCare` $\rightarrow$ `سمائل کیئر`, `Dental` $\rightarrow$ `ڈینٹل`, `Scaling` $\rightarrow$ `اسکیلنگ`, `Timing` $\rightarrow$ `ٹائمنگ`, `WhatsApp` $\rightarrow$ `واٹس ایپ`.
   * Converts numerical digits into Urdu script words: `4000` $\rightarrow$ `چار ہزار روپے`, `1500` $\rightarrow$ `پندرہ سو روپے`.
-  * Rule-based phonetic digraph engine (`sh` $\rightarrow$ `ش`, `kh` $\rightarrow$ `خ`, `ch` $\rightarrow$ `چ`, `th` $\rightarrow$ `تھ`) ensures **zero Latin characters (`[A-Za-z]`) ever reach the speech synthesizer**.
+  * Rule-based phonetic digraph engine (`sh` $\rightarrow$ `ش`, `kh` $\rightarrow$ `خ`, `ch` $\rightarrow$ `چ`, `th` $\rightarrow$ `تھ`) ensures **zero Latin characters (`[A-Za-z]`) reach the speech synthesizer**, maintaining flawless Urdu phonology.
 
-### 4. Dual-Reference Anchored Voice Cloning
-* Clones the user's recorded audio sample (10–30s) while anchoring the speech synthesis to the native Lahori **Aiza** model (`reference_id: cdd7d48d6038403199a3085b4e09547e`).
-* Extracts the speaker's **timbre, pitch, and vocal texture** from the user's sample, while forcing the **Urdu phonetics, vowel lengths, and intonation** to follow native Pakistani speech patterns.
+### 4. Zero-Shot Instant Voice Cloning with `s2.1-pro-free` & Transcript Review
+* **Authentic Acoustic Identity**: Normal cloning uses solely the user's authentic reference audio as its acoustic anchor without cross-attention interpolation or preset mixing.
+* **Dual Recording Input**: Supports live browser microphone recording (10–30s) or direct audio file upload (`.mp3`, `.wav`, `.ogg`, `.m4a`).
+* **Groq Whisper Transcription & Human Review**: Reference audio is transcribed via Groq Whisper (`whisper-large-v3-turbo`) and surfaced in an interactive, editable RTL Urdu textarea—enabling users to correct domain terminology before voice profile activation for pixel-perfect forced-alignment.
+* **Cryptographic SHA-256 Audio Caching**: Eliminates audio cross-talk by computing SHA-256 digests over `(text, model, speed, audio_bytes, transcript)` rather than fragile length heuristics.
+* **Zero Silent Fallback**: If voice cloning fails (e.g. upstream network error), raises an explicit `VoiceCloningError` with clear UI diagnostics—never silently playing Edge-TTS under a fake cloned identity.
+* **Privacy Compliance & On-Demand Purge**: User voice recordings are kept strictly private; users can click **Delete Sample** or call `POST /api/demo/delete-voice` to purge audio data and cache instantly.
 
 ### 5. Multi-Turn Full-Duplex Voice with Foolproof Disconnect
 * **Continuous Interaction**: Every user voice turn receives a continuous audio reply without dropping back to text-only mode.
@@ -123,7 +128,7 @@ The platform provides 8 pluggable business tools accessible via `/api/demo/tools
 │   ┌───────────────────────────┐  ┌─────────────────────────────┐       │
 │   │ app/voice_service.py      │  │ app/receipt_service.py      │       │
 │   │ - Phonetic Normalizer     │  │ - 58mm Monospace Thermal    │       │
-│   │ - Fish Audio Aiza Anchor  │  │ app/ocr_service.py          │       │
+│   │ - Fish Audio s2.1-pro-free│  │ app/ocr_service.py          │       │
 │   │ - Edge-TTS (Uzma & Asad)  │  │ - Multimodal Vision OCR     │       │
 │   └───────────────────────────┘  └─────────────────────────────┘       │
 └───────────────────────────────────┬────────────────────────────────────┘
@@ -132,8 +137,8 @@ The platform provides 8 pluggable business tools accessible via `/api/demo/tools
 ┌────────────────────────────────────────────────────────────────────────┐
 │                      EXTERNAL CLOUD INTELLIGENCE                       │
 │                                                                        │
-│   - Groq Cloud (60ms TTFT, Whisper-Large-v3-Turbo, Llama Vision)       │
-│   - Fish Audio API (Aiza Lahori Model cdd7d48d6038403199a3085b4e09547e)│
+│   - Groq Cloud (Whisper-Large-v3-Turbo Speech-to-Text & Llama-3.3-70B) │
+│   - Fish Audio API (s2.1-pro-free Zero-Shot Instant Voice Cloning)     │
 │   - Microsoft Neural Cloud (ur-PK-UzmaNeural, ur-PK-AsadNeural)        │
 └────────────────────────────────────────────────────────────────────────┘
 ```
@@ -194,28 +199,40 @@ Open your browser:
 
 ## Running the Automated Test Suite
 
-The platform includes 11 end-to-end integration and unit test suites:
+The platform includes 21 comprehensive integration, unit, and voice QA test suites:
 
 ```bash
-pytest tests/test_live_demo.py -v
+pytest tests/test_live_demo.py tests/test_voice_cloning_qa.py -v
 ```
 
 **Verification Results:**
 ```
-tests/test_live_demo.py::test_demo_page_loads PASSED                     [  9%]
-tests/test_live_demo.py::test_demo_create_session_with_custom_agent_and_fallback PASSED [ 18%]
-tests/test_live_demo.py::test_fallback_mechanism_unknown_query PASSED    [ 27%]
-tests/test_live_demo.py::test_multi_turn_continuous_voice_chat PASSED    [ 36%]
-tests/test_live_demo.py::test_physical_receipt_generation_endpoints PASSED [ 45%]
-tests/test_live_demo.py::test_ocr_receipt_inspector_endpoint PASSED      [ 54%]
-tests/test_live_demo.py::test_websocket_multi_turn_call PASSED           [ 63%]
-tests/test_live_demo.py::test_landing_page_loads PASSED                  [ 72%]
-tests/test_live_demo.py::test_login_page_loads PASSED                    [ 81%]
-tests/test_live_demo.py::test_tools_catalog_and_simulation_endpoints PASSED [ 90%]
-tests/test_live_demo.py::test_aiza_fish_voice_session PASSED             [100%]
+tests/test_live_demo.py::test_demo_page_loads PASSED                     [  4%]
+tests/test_live_demo.py::test_demo_create_session_with_custom_agent_and_fallback PASSED [  9%]
+tests/test_live_demo.py::test_fallback_mechanism_unknown_query PASSED    [ 14%]
+tests/test_live_demo.py::test_multi_turn_continuous_voice_chat PASSED    [ 19%]
+tests/test_live_demo.py::test_physical_receipt_generation_endpoints PASSED [ 23%]
+tests/test_live_demo.py::test_ocr_receipt_inspector_endpoint PASSED      [ 28%]
+tests/test_live_demo.py::test_websocket_multi_turn_call PASSED           [ 33%]
+tests/test_live_demo.py::test_landing_page_loads PASSED                  [ 38%]
+tests/test_live_demo.py::test_login_page_loads PASSED                    [ 42%]
+tests/test_live_demo.py::test_tools_catalog_and_simulation_endpoints PASSED [ 47%]
+tests/test_live_demo.py::test_aiza_fish_voice_session PASSED             [ 52%]
+tests/test_voice_cloning_qa.py::test_fish_free_model_identifier PASSED   [ 57%]
+tests/test_voice_cloning_qa.py::test_no_aiza_model_in_user_cloning_request PASSED [ 61%]
+tests/test_voice_cloning_qa.py::test_no_silent_fallback_on_cloning_failure PASSED [ 66%]
+tests/test_voice_cloning_qa.py::test_cryptographic_cache_uniqueness PASSED [ 71%]
+tests/test_voice_cloning_qa.py::test_no_hallucinated_prices_when_services_empty PASSED [ 76%]
+tests/test_voice_cloning_qa.py::test_transcribe_reference_does_not_fabricate PASSED [ 80%]
+tests/test_voice_cloning_qa.py::test_transcribe_reference_endpoint PASSED [ 85%]
+tests/test_voice_cloning_qa.py::test_delete_voice_endpoint PASSED        [ 90%]
+tests/test_voice_cloning_qa.py::test_code_switching_phonetics_urdu_mapping PASSED [ 95%]
+tests/test_voice_cloning_qa.py::test_booking_confirmation_tool_validation PASSED [100%]
 
-================== 11 passed in 91.12s ===================
+================== 21 passed in 66.23s ===================
 ```
+
+For the complete Voice QA evaluation methodology, detailed audit log, and rubric scoring, see [VOICE_QA_REPORT.md](VOICE_QA_REPORT.md).
 
 ---
 
@@ -229,6 +246,8 @@ tests/test_live_demo.py::test_aiza_fish_voice_session PASSED             [100%]
 | `POST` | `/api/demo/session` | Initializes an agent session with custom name, business details, voice model, and fallback. |
 | `POST` | `/api/demo/chat` | Turn-based voice/text chat returning text, synthesized MP3, and inline receipt. |
 | `WS` | `/ws/live-call/{session_id}` | Full-duplex WebSocket stream for live phone calls. |
+| `POST` | `/api/demo/transcribe-reference` | Groq Whisper speech-to-text extraction of reference audio with word confidence. |
+| `POST` | `/api/demo/delete-voice` | Privacy purge of active user reference audio, transcript, and audio cache. |
 | `GET` | `/api/demo/tools` | Fetches catalog of 8 modular business tools with connection states. |
 | `POST` | `/api/demo/tools/toggle` | Toggles tool connection state (e.g. enable/disable KDS or WhatsApp). |
 | `POST` | `/api/demo/tools/simulate` | Executes realistic interactive simulations of business tools. |

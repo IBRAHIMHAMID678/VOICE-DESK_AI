@@ -1,0 +1,97 @@
+{
+  "evaluation_suite": "Urdu Voice Receptionist Quality & Grounding Benchmarks",
+  "version": "2.0.0",
+  "locale": "ur-PK",
+  "categories": [
+    {
+      "id": "eval_01_greeting_opening",
+      "name": "Standard Greeting & Identity",
+      "input_text": "Assalam-o-Alaikum, kya yeh SmileCare Dental Clinic hai?",
+      "expected_roman": "Walaikum Assalam ji! Ji haan, SmileCare Dental Clinic se Zoya baat kar rahi hoon. Ji batayein, kya madad kar sakti hoon?",
+      "expected_urdu": "وعلیکم السلام جی! جی ہاں، سمائل کیئر ڈینٹل کلینک سے زویا بات کر رہی ہوں۔ جی بتائیں، کیا مدد کر سکتی ہوں؟",
+      "test_dimension": "Timbre identity, natural Lahori conversational warmth, no stiff 'Khushamdeed'",
+      "zero_hallucination_check": true
+    },
+    {
+      "id": "eval_02_appointment_inquiry",
+      "name": "Appointment Slot Inquiry",
+      "input_text": "Mujhe kal shaam 5 baje scaling ke liye appointment chahiye, slot available hai?",
+      "expected_roman": "Ji bilkul, kal shaam 5 baje ka slot available hai. Main aap ka naam note kar loon?",
+      "expected_urdu": "جی بالکل، کل شام پانچ بجے کا سلاٹ اویلیبل ہے۔ میں آپ کا نام نوٹ کر لوں؟",
+      "test_dimension": "Time expressions (shaam 5 baje), loanword 'slot', 'available'",
+      "zero_hallucination_check": true
+    },
+    {
+      "id": "eval_03_pricing_verification",
+      "name": "Exact Service Pricing Verification",
+      "input_text": "Laser teeth whitening ke kitne charges hain?",
+      "expected_roman": "Laser Teeth Whitening ke charges Rs 12000 hain ji.",
+      "expected_urdu": "لیزر دانت وائٹننگ کے چارجز بارہ ہزار روپے ہیں جی۔",
+      "test_dimension": "Zero hallucination check: Must return verified price (12000 PKR), never fabricate 1500 or random discounts",
+      "zero_hallucination_check": true
+    },
+    {
+      "id": "eval_04_code_switching_loanwords",
+      "name": "Everyday Code-Switching & English Loanwords",
+      "input_text": "Aap clinic ki location aur timing WhatsApp pe share kar sakti hain?",
+      "expected_roman": "Ji zaroor, main WhatsApp pe clinic ki location aur timing send kar deti hoon.",
+      "expected_urdu": "جی ضرور، میں واٹس ایپ پہ کلینک کی لوکیشن اور ٹائمنگ سینڈ کر دیتی ہوں۔",
+      "test_dimension": "Natural Pakistani code-switching: 'WhatsApp', 'location', 'timing', 'clinic'",
+      "zero_hallucination_check": true
+    },
+    {
+      "id": "eval_05_real_booking_execution",
+      "name": "Verified Booking Execution & Receipt",
+      "input_text": "Theek hai, mera Teeth Scaling kal shaam 5 baje confirm kar dein, mera naam Bilal hai.",
+      "expected_roman": "Ji Bilal sahib, kal shaam 5 baje aap ki Teeth Scaling confirm ho gayi hai. Hamara staff clinic pe aap ka wait kare ga.",
+      "expected_urdu": "جی بلال صاحب، کل شام پانچ بجے آپ کی دانت اسکیلنگ کنفرم ہو گئی ہے۔ ہمارا اسٹاف کلینک پہ آپ کا ویٹ کرے گا۔",
+      "test_dimension": "Real tool confirmation against verified services list, receipt generation with exact 4000 PKR",
+      "zero_hallucination_check": true
+    },
+    {
+      "id": "eval_06_out_of_scope_fallback",
+      "name": "Out-of-Scope Query & Anti-Hallucination Fallback",
+      "input_text": "Kya aap chicken biryani aur pizza deliver karte hain?",
+      "expected_roman": "Main is baare mein abhi confirm nahi bata sakti ji, main management se pooch kar aap ko update karti hoon.",
+      "expected_urdu": "میں اس بارے میں ابھی کنفرم نہیں بتا سکتی جی، میں مینجمنٹ سے پوچھ کر آپ کو اپڈیٹ کرتی ہوں۔",
+      "test_dimension": "Must trigger configured fallback response, ZERO hallucination of food or off-topic items",
+      "zero_hallucination_check": true
+    },
+    {
+      "id": "eval_07_numbers_and_time",
+      "name": "Urdu Numbers & Chronological Expressions",
+      "input_text": "Aap ki timing subah kitne baje start hoti hai aur checkup fee kitni hai?",
+      "expected_roman": "Hamari timing subah 11 baje se raat 9 baje tak hai, aur consultation fee Rs 1500 hai.",
+      "expected_urdu": "ہماری ٹائمنگ صبح گیارہ بجے سے رات نو بجے تک ہے، اور کنسلٹیشن فیس پندرہ سو روپے ہے۔",
+      "test_dimension": "Accurate phonetic speech synthesis of digits: 11 (گیارہ), 9 (نو), 1500 (پندرہ سو)",
+      "zero_hallucination_check": true
+    },
+    {
+      "id": "eval_08_difficult_urdu_consonants",
+      "name": "Difficult Native Urdu Consonants (Kha, Ghain, Qaaf, Rray)",
+      "input_text": "Khas consultation ke qawaid aur ghair mamooli khidmat ke charges kya hain?",
+      "expected_roman": "Ji hamare paas specialist doctor se khas consultation available hai.",
+      "expected_urdu": "جی ہمارے پاس اسپیشلسٹ ڈاکٹر سے خاص کنسلٹیشن اویلیبل ہے۔",
+      "test_dimension": "Native phonetics: خ (Kha), غ (Ghain), ق (Qaaf), ڑ (Rray) without Americanized vowel flattening",
+      "zero_hallucination_check": true
+    },
+    {
+      "id": "eval_09_medical_loanwords_phonetics",
+      "name": "Medical & Aesthetic Dental Loanword Transcription",
+      "input_text": "Deep polishing aur cavity filling ka procedure kitna time leta hai?",
+      "expected_roman": "Polishing aur filling mein lag bhag 30 se 45 minute lagte hain ji.",
+      "expected_urdu": "پالشنگ اور فلنگ میں لگ بھگ تیس سے پینتالیس منٹ لگتے ہیں جی۔",
+      "test_dimension": "Accurate transliteration of dental terms (پالشنگ, فلنگ) for native pronunciation",
+      "zero_hallucination_check": true
+    },
+    {
+      "id": "eval_10_call_closing",
+      "name": "Polite Call Closing & Farewell",
+      "input_text": "Bohat shukriya aap ki rehnumai ka, Allah Hafiz.",
+      "expected_roman": "Bohat shukriya ji, apna khayal rakhein. Allah Hafiz!",
+      "expected_urdu": "بہت شکریہ جی، اپنا خیال رکھیں۔ اللہ حافظ!",
+      "test_dimension": "Natural Pakistani farewell ('Allah Hafiz') without artificial bookish ending",
+      "zero_hallucination_check": true
+    }
+  ]
+}

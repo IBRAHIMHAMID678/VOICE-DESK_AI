@@ -194,29 +194,69 @@
                 <div id="subpanel-clone" class="vsubpanel" style="display:none;">
                   <div class="clone-recording-box">
                     <p class="cr-instruction">
-                      Record 15–30 seconds. Your voice timbre is cloned and anchored to native Lahori Pakistani phonetics (Aiza) to eliminate foreign accents.
+                      Upload or record 15–30 seconds. Your personal voice timbre, pitch, and identity are preserved. For best Pakistani Urdu accent, speak in natural everyday Pakistani Urdu.
                     </p>
                     <div class="cr-sample-prompt">
                       "Assalam-o-Alaikum ji! Hamara business Lahore mein hai. Hum appointments aur customer queries handle karte hain. Timing subah 11 se raat 9 baje tak hai."
                     </div>
 
-                    <canvas id="sidebar-waveform-canvas" width="320" height="48"></canvas>
-                    <div id="sidebar-record-timer" class="record-timer">00:00 / 00:30</div>
-
-                    <div class="cr-actions">
-                      <button type="button" id="btn-sidebar-start-record" class="btn-rec">
-                        <span class="rec-dot"></span>
-                        <span>Record Sample</span>
-                      </button>
-                      <button type="button" id="btn-sidebar-stop-record" class="btn-stop" style="display:none;">
-                        <span class="stop-sq"></span>
-                        <span>Stop & Capture</span>
-                      </button>
+                    <!-- Input Methods Tabs: Mic vs File Upload -->
+                    <div class="clone-method-selector" style="display: flex; gap: 8px; margin: 10px 0;">
+                      <button type="button" id="btn-method-record" class="btn-xs-ghost active" style="flex: 1; padding: 6px; font-weight: 600;">🎙️ Record Mic</button>
+                      <button type="button" id="btn-method-upload" class="btn-xs-ghost" style="flex: 1; padding: 6px; font-weight: 600;">📁 Upload Audio</button>
                     </div>
 
-                    <div id="sidebar-voice-preview" class="voice-preview-box" style="display:none;">
-                      <audio id="sidebar-preview-audio" controls></audio>
-                      <button type="button" id="btn-sidebar-rerecord" class="btn-xs-ghost">Re-record</button>
+                    <!-- Record Sub-Box -->
+                    <div id="clone-record-section">
+                      <canvas id="sidebar-waveform-canvas" width="320" height="48"></canvas>
+                      <div id="sidebar-record-timer" class="record-timer">00:00 / 00:30</div>
+
+                      <div class="cr-actions">
+                        <button type="button" id="btn-sidebar-start-record" class="btn-rec">
+                          <span class="rec-dot"></span>
+                          <span>Record Sample</span>
+                        </button>
+                        <button type="button" id="btn-sidebar-stop-record" class="btn-stop" style="display:none;">
+                          <span class="stop-sq"></span>
+                          <span>Stop & Capture</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    <!-- Upload Sub-Box -->
+                    <div id="clone-upload-section" style="display: none; padding: 10px 0;">
+                      <input type="file" id="sidebar-voice-file-input" accept="audio/*,.mp3,.wav,.ogg,.m4a" style="display: none;">
+                      <button type="button" id="btn-sidebar-browse-audio" class="btn-secondary" style="width: 100%; justify-content: center; padding: 8px 12px; font-size: 0.85rem;">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                        <span>Choose Audio File (.mp3, .wav, .m4a)</span>
+                      </button>
+                      <div id="sidebar-upload-filename" style="font-size: 0.75rem; color: #64748b; margin-top: 5px; text-align: center;"></div>
+                    </div>
+
+                    <!-- Audio Preview -->
+                    <div id="sidebar-voice-preview" class="voice-preview-box" style="display:none; flex-direction: column; gap: 8px; margin-top: 10px;">
+                      <audio id="sidebar-preview-audio" controls style="width: 100%; height: 34px;"></audio>
+                      <div style="display: flex; gap: 6px; justify-content: flex-end;">
+                        <button type="button" id="btn-sidebar-rerecord" class="btn-xs-ghost">Re-record / Change</button>
+                        <button type="button" id="btn-sidebar-purge-voice" class="btn-xs-ghost" style="color: #ef4444;" title="Purge voice sample">🗑️ Delete Sample</button>
+                      </div>
+                    </div>
+
+                    <!-- Transcription Review & Edit Area -->
+                    <div id="sidebar-transcript-box" style="display: none; margin-top: 12px; text-align: left;">
+                      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                        <label for="sidebar-reference-transcript" style="font-size: 0.78rem; font-weight: 600; color: #334155;">Reference Transcript (Review & Edit):</label>
+                        <span id="transcript-status-spinner" style="font-size: 0.72rem; color: #0d9488; display: none;">Transcribing with Whisper...</span>
+                      </div>
+                      <textarea id="sidebar-reference-transcript" rows="3" style="width: 100%; font-size: 0.82rem; font-family: 'Noto Nastaliq Urdu', 'Plus Jakarta Sans', sans-serif; direction: rtl; text-align: right; padding: 6px; border: 1px solid #cbd5e1; border-radius: 6px; line-height: 1.8;" placeholder="Urdu transcript will appear here automatically for review..."></textarea>
+                      <p style="font-size: 0.70rem; color: #64748b; margin-top: 3px; line-height: 1.3;">
+                        Accurate transcript is required for Fish Audio forced alignment. Edit any misheard words before saving.
+                      </p>
+                    </div>
+
+                    <!-- Privacy Disclosure Notice -->
+                    <div class="privacy-disclosure" style="margin-top: 12px; padding: 8px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 0.72rem; color: #475569; line-height: 1.4;">
+                      <span>🔒 <strong>Privacy & Cost Guarantee:</strong> Powered by Fish Audio <code>s2.1-pro-free</code> ($0.00 fair use). Reference recordings are kept private and never published. Click "Delete Sample" to purge at any time.</span>
                     </div>
                   </div>
                 </div>
@@ -314,9 +354,11 @@
                   <span class="avatar-live-indicator" id="avatar-live-indicator"></span>
                 </div>
                 <div class="agent-meta">
-                  <div class="am-name-row">
+                  <div class="am-name-row" style="flex-wrap: wrap; gap: 6px; align-items: center;">
                     <h2 id="console-agent-name">Zoya</h2>
                     <span id="console-voice-badge" class="badge badge-teal">Studio Uzma (Lahori)</span>
+                    <span id="console-model-badge" class="badge badge-platform" style="font-family: monospace; font-size: 0.70rem;">ur-PK-UzmaNeural</span>
+                    <span id="console-status-badge" class="badge" style="background: rgba(16, 185, 129, 0.15); color: #059669; font-size: 0.70rem;">Ready</span>
                   </div>
                   <p id="console-agent-title">Voice Receptionist • <span id="console-biz-name">SmileCare Dental Clinic</span></p>
                 </div>
@@ -327,6 +369,18 @@
                   <span class="state-dot" id="state-dot"></span>
                   <span id="call-state-label">Ready to Call</span>
                 </div>
+              </div>
+            </div>
+
+            <!-- VOICE STATUS & ERROR ALERT BANNER -->
+            <div id="console-error-banner" style="display: none; margin: 10px 16px; padding: 10px 14px; background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; color: #b91c1c; font-size: 0.82rem; line-height: 1.4;">
+              <div style="display: flex; align-items: flex-start; gap: 8px;">
+                <span style="font-size: 1.1rem; line-height: 1;">⚠️</span>
+                <div style="flex: 1;">
+                  <strong id="console-error-title" style="display: block; font-weight: 700; margin-bottom: 2px;">Voice Cloning Notice</strong>
+                  <span id="console-error-message">Voice cloning encountered an issue.</span>
+                </div>
+                <button type="button" id="btn-dismiss-error" style="background: none; border: none; font-size: 1.1rem; color: #991b1b; cursor: pointer;">&times;</button>
               </div>
             </div>
 

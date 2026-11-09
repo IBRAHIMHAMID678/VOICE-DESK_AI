@@ -37,9 +37,13 @@ if _env_file.exists():
 FISH_AUDIO_API_KEY = os.getenv("FISH_AUDIO_API_KEY", "")
 GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
 FISH_TTS_URL = "https://api.fish.audio/v1/tts"
-AIZA_MODEL_ID = "cdd7d48d6038403199a3085b4e09547e"  # Native Lahori Pakistani accent model
+FISH_FREE_MODEL = "s2.1-pro-free"
 CACHE_DIR = Path(__file__).resolve().parent.parent / "data" / "audio_cache"
 CACHE_DIR.mkdir(parents=True, exist_ok=True)
+
+class VoiceCloningError(Exception):
+    """Raised when instant voice cloning fails and silent fallback is disallowed."""
+    pass
 
 _MEM_CACHE: dict[str, bytes] = {}
 
@@ -141,6 +145,43 @@ LOANWORDS_URDU_MAP = {
     "town": "ٹاؤن",
     "road": "روڈ",
     "mall": "مال",
+    # Communication & Tech
+    "whatsapp": "واٹس ایپ",
+    "online": "آن لائن",
+    "offline": "آف لائن",
+    "call": "کال",
+    "phone": "فون",
+    "mobile": "موبائل",
+    "message": "میسج",
+    "sms": "ایس ایم ایس",
+    "otp": "او ٹی پی",
+    "id": "آئی ڈی",
+    "app": "ایپ",
+    "website": "ویب سائٹ",
+    # Business & Transactions
+    "reception": "ریسیپشن",
+    "receptionist": "ریسیپشنسٹ",
+    "manager": "مینجر",
+    "management": "مینجمنٹ",
+    "cash": "کیش",
+    "card": "کارڈ",
+    "payment": "پیمنٹ",
+    "bill": "بل",
+    "receipt": "رسید",
+    "invoice": "انوائس",
+    "branch": "برانچ",
+    "center": "سینٹر",
+    "centre": "سینٹر",
+    "session": "سیشن",
+    "package": "پیکیج",
+    "rate": "ریٹ",
+    "price": "قیمت",
+    "total": "ٹوٹل",
+    "feedback": "فیڈ بیک",
+    "review": "ریویو",
+    "emergency": "ایمرجنسی",
+    "schedule": "شیڈول",
+    "advance": "ایڈوانس",
 }
 
 NUMBERS_URDU_MAP = {
@@ -349,15 +390,22 @@ def sanitize_audio_to_mp3(raw_bytes: bytes) -> bytes:
 
 
 async def transcribe_reference_audio(audio_bytes: bytes) -> str:
-    """Transcribes user voice sample with Groq Whisper for 100% phonetic forced alignment."""
-    if not GROQ_API_KEY or len(audio_bytes) < 1000:
-        return "السلام علیکم! ہم کسٹمر سروس اور اپائنٹمنٹس ہینڈل کرتے ہیں۔"
+    """Transcribes user voice sample with Groq Whisper for ground-truth reference alignment.
+
+    Guarantees authentic transcription of the speaker's actual voice sample.
+    Never fabricates a synthetic or assumed fallback transcript.
+    """
+    if not audio_bytes or len(audio_bytes) < 500:
+        raise ValueError("Audio recording is too short or empty for transcription.")
+
+    if not GROQ_API_KEY:
+        raise ValueError("GROQ_API_KEY is not configured for reference audio transcription.")
 
     try:
         headers = {"Authorization": f"Bearer {GROQ_API_KEY}"}
         files = {"file": ("reference.mp3", audio_bytes, "audio/mpeg")}
         data = {"model": "whisper-large-v3-turbo", "language": "ur"}
-        async with httpx.AsyncClient(timeout=8.0) as client:
+        async with httpx.AsyncClient(timeout=12.0) as client:
             res = await client.post(
                 "https://api.groq.com/openai/v1/audio/transcriptions",
                 headers=headers,
@@ -369,17 +417,60 @@ async def transcribe_reference_audio(audio_bytes: bytes) -> str:
                 if transcript:
                     log.info("Whisper ground-truth reference transcribed: %s", transcript[:60])
                     return transcript
+                raise ValueError("Whisper detected no spoken words in the audio sample.")
+            else:
+                log.warning("Whisper reference audio transcription HTTP error %s: %s", res.status_code, res.text[:200])
+                raise RuntimeError(f"Whisper transcription failed (HTTP {res.status_code})")
     except Exception as e:
         log.warning("Whisper reference audio transcription failed: %s", e)
+        raise
 
-    return "السلام علیکم! ہم کسٹمر سروس اور اپائنٹمنٹس ہینڈل کرتے ہیں۔"
 
+def compute_cache_key(
+    text: str,
+    reference_audio_bytes: bytes | None = None,
+    reference_text: str | None = None,
+    model: str = "ur-PK-UzmaNeural",
+    speed: float = 1.0,
+) -> str:
+    """Cryptographically unique SHA-256 hash across text, model, speed, audio content and transcript.
 
-def _get_cache_key(text: str, voice_or_ref: str) -> str:
+    Prevents any cache collisions between different voice samples of similar size.
+    """
     h = hashlib.sha256()
     h.update(text.strip().encode("utf-8"))
-    h.update(voice_or_ref.encode("utf-8"))
+    h.update(model.strip().encode("utf-8"))
+    h.update(f"{speed:.2f}".encode("utf-8"))
+    if reference_audio_bytes:
+        h.update(hashlib.sha256(reference_audio_bytes).digest())
+    if reference_text:
+        h.update(reference_text.strip().encode("utf-8"))
     return h.hexdigest()
+
+
+def delete_voice_cache(reference_audio_bytes: bytes | None = None) -> int:
+    """Removes stored voice cache for user privacy compliance."""
+    global _MEM_CACHE
+    deleted_count = 0
+    if reference_audio_bytes:
+        audio_digest = hashlib.sha256(reference_audio_bytes).digest()
+        # In-memory purge
+        keys_to_del = [k for k in _MEM_CACHE if k.startswith("ref_")]
+        for k in keys_to_del:
+            del _MEM_CACHE[k]
+            deleted_count += 1
+    else:
+        deleted_count = len(_MEM_CACHE)
+        _MEM_CACHE.clear()
+
+    # Also clean disk cache
+    try:
+        for f in CACHE_DIR.glob("*.mp3"):
+            f.unlink(missing_ok=True)
+            deleted_count += 1
+    except Exception as e:
+        log.warning("Error cleaning disk cache: %s", e)
+    return deleted_count
 
 
 async def synthesize_speech(
@@ -388,22 +479,90 @@ async def synthesize_speech(
     reference_text: str | None = None,
     fallback_voice: str = "ur-PK-UzmaNeural",
     speed: float = 1.0,
+    allow_fallback: bool = False,
 ) -> bytes:
-    """Synthesize speech using Fish Audio voice cloning if reference provided,
+    """Synthesizes speech using Fish Audio voice cloning (s2.1-pro-free) if reference provided,
+    or native Pakistani Neural voice via edge-tts.
 
-    or native Pakistani Neural voice via edge-tts to guarantee authentic accent.
-    Audio is guaranteed to be returned and never dropped.
+    CRITICAL HONESTY CONTRACT:
+    When reference_audio_bytes is provided (user selected voice cloning):
+    - If cloning fails and allow_fallback is False, raises VoiceCloningError.
+    - Never silently falls back to a preset voice and pretends it is the cloned voice.
     """
     text = text.strip()
     if not text:
         return b""
 
-    # Phonetically normalize to Urdu script to eliminate American accent
+    # Phonetically normalize to Urdu script to preserve natural Pakistani Urdu phonetics
     tts_text = normalize_urdu_phonetics_for_tts(text)
 
-    # Cache check
-    ref_sig = str(len(reference_audio_bytes)) if reference_audio_bytes else fallback_voice
-    cache_key = _get_cache_key(f"{tts_text}_{speed}", ref_sig)
+    # 1. Voice Cloning Mode (Free Fish Audio s2.1-pro-free instant cloning)
+    if reference_audio_bytes:
+        model_name = FISH_FREE_MODEL
+        cache_key = compute_cache_key(
+            text=tts_text,
+            reference_audio_bytes=reference_audio_bytes,
+            reference_text=reference_text,
+            model=model_name,
+            speed=speed,
+        )
+
+        if cache_key in _MEM_CACHE:
+            return _MEM_CACHE[cache_key]
+
+        disk_path = CACHE_DIR / f"{cache_key}.mp3"
+        if disk_path.exists():
+            try:
+                data = disk_path.read_bytes()
+                if data and len(data) > 1000:
+                    _MEM_CACHE[cache_key] = data
+                    return data
+            except Exception:
+                pass
+
+        try:
+            audio_bytes = await _synthesize_fish_cloned(
+                text=tts_text,
+                reference_audio_bytes=reference_audio_bytes,
+                reference_text=reference_text or "",
+                speed=speed,
+            )
+            if audio_bytes and len(audio_bytes) > 1000:
+                _MEM_CACHE[cache_key] = audio_bytes
+                disk_path.write_bytes(audio_bytes)
+                return audio_bytes
+            raise VoiceCloningError("Fish Audio returned empty or truncated audio.")
+        except Exception as e:
+            log.error("Fish Audio instant clone failed: %s", e)
+            if not allow_fallback:
+                raise VoiceCloningError(f"Voice cloning failed: {e}") from e
+            log.warning("Explicit fallback allowed; switching to %s", fallback_voice)
+
+    # 2. Preset / Studio Voice Mode
+    # If user selected Fish Audio preset voice
+    if fallback_voice == "fish-aiza" and FISH_AUDIO_API_KEY:
+        try:
+            audio_bytes = await _synthesize_fish_model(
+                text=tts_text,
+                model_id="cdd7d48d6038403199a3085b4e09547e",
+                speed=speed,
+            )
+            if audio_bytes and len(audio_bytes) > 1000:
+                _MEM_CACHE[cache_key] = audio_bytes
+                disk_path.write_bytes(audio_bytes)
+                return audio_bytes
+        except Exception as e:
+            log.warning("Fish Audio preset synthesis failed: %s; using Uzma Neural", e)
+            fallback_voice = "ur-PK-UzmaNeural"
+
+    model_name = fallback_voice
+    cache_key = compute_cache_key(
+        text=tts_text,
+        reference_audio_bytes=None,
+        reference_text=None,
+        model=model_name,
+        speed=speed,
+    )
 
     if cache_key in _MEM_CACHE:
         return _MEM_CACHE[cache_key]
@@ -418,39 +577,6 @@ async def synthesize_speech(
         except Exception:
             pass
 
-    # 1. If user provided a reference voice sample, use Fish Audio zero-shot cloning anchored to Aiza (Lahori)
-    if reference_audio_bytes and FISH_AUDIO_API_KEY:
-        try:
-            audio_bytes = await _synthesize_fish_cloned(
-                text=tts_text,
-                reference_audio_bytes=reference_audio_bytes,
-                reference_text=reference_text,
-                speed=speed,
-            )
-            if audio_bytes and len(audio_bytes) > 1000:
-                _MEM_CACHE[cache_key] = audio_bytes
-                disk_path.write_bytes(audio_bytes)
-                return audio_bytes
-        except Exception as e:
-            log.warning("Fish Audio anchored clone failed: %s; falling back to Pakistani Neural voice", e)
-
-    # 2. If user selected Aiza (Fish Audio Lahori voice)
-    if fallback_voice == "fish-aiza" and FISH_AUDIO_API_KEY:
-        try:
-            audio_bytes = await _synthesize_fish_model(
-                text=tts_text,
-                model_id=AIZA_MODEL_ID,
-                speed=speed,
-            )
-            if audio_bytes and len(audio_bytes) > 1000:
-                _MEM_CACHE[cache_key] = audio_bytes
-                disk_path.write_bytes(audio_bytes)
-                return audio_bytes
-        except Exception as e:
-            log.warning("Fish Audio Aiza synthesis failed: %s; falling back to Uzma", e)
-            fallback_voice = "ur-PK-UzmaNeural"
-
-    # 3. Native Pakistani Neural voice (edge-tts 7.3+)
     try:
         audio_bytes = await _synthesize_edge_tts(tts_text, fallback_voice, speed=speed)
         if audio_bytes and len(audio_bytes) > 1000:
@@ -458,79 +584,27 @@ async def synthesize_speech(
             disk_path.write_bytes(audio_bytes)
             return audio_bytes
     except Exception as e:
-        log.warning("Edge-TTS Pakistani Neural synthesis failed: %s; attempting base voice", e)
-
-    # 4. Last-ditch Fish Audio base voice
-    if FISH_AUDIO_API_KEY:
-        try:
-            audio_bytes = await _synthesize_fish_base(tts_text)
-            if audio_bytes and len(audio_bytes) > 1000:
-                _MEM_CACHE[cache_key] = audio_bytes
-                disk_path.write_bytes(audio_bytes)
-                return audio_bytes
-        except Exception as e:
-            log.error("Fish Audio base fallback failed: %s", e)
+        log.error("Edge-TTS synthesis failed: %s", e)
+        raise RuntimeError(f"Edge-TTS synthesis failed: {e}") from e
 
     return b""
 
 
-async def _synthesize_fish_cloned(
-    text: str,
-    reference_audio_bytes: bytes,
-    reference_text: str | None = None,
-    speed: float = 1.0,
-) -> bytes:
-    """Clones the voice sample using Fish Audio anchored to the Aiza Lahori model to eliminate American accent."""
-    headers = {
-        "Authorization": f"Bearer {FISH_AUDIO_API_KEY}",
-        "Content-Type": "application/msgpack",
-        "User-Agent": "Mozilla/5.0",
-    }
-
-    payload = {
-        "text": text,
-        "reference_id": AIZA_MODEL_ID,  # Pakistani Lahori accent anchor
-        "format": "mp3",
-        "language": "ur",
-        "latency": "balanced",
-        "temperature": 0.65,
-        "top_p": 0.7,
-        "prosody": {"speed": speed},
-        "references": [
-            {
-                "audio": reference_audio_bytes,
-                "text": reference_text or "السلام علیکم! ہم کسٹمر سروس اور اپائنٹمنٹس ہینڈل کرتے ہیں۔",
-            }
-        ],
-    }
-
-    packed_data = ormsgpack.packb(payload)
-
-    # 12.0s timeout so consecutive turns never hang
-    async with httpx.AsyncClient(timeout=12.0) as client:
-        resp = await client.post(FISH_TTS_URL, headers=headers, content=packed_data)
-        if resp.status_code == 200:
-            return resp.content
-        log.warning("Fish Audio clone returned HTTP %s: %s", resp.status_code, resp.text[:200])
-        raise RuntimeError(f"Fish Audio error: {resp.status_code}")
-
-
 async def _synthesize_fish_model(
     text: str,
-    model_id: str = AIZA_MODEL_ID,
+    model_id: str,
     speed: float = 1.0,
 ) -> bytes:
-    """Synthesizes speech using a specific Fish Audio voice model ID (such as Aiza)."""
+    """Synthesizes speech using a specific Fish Audio voice model ID for preset voices."""
     headers = {
         "Authorization": f"Bearer {FISH_AUDIO_API_KEY}",
         "Content-Type": "application/json",
-        "User-Agent": "Mozilla/5.0",
+        "User-Agent": "VoiceDesk-UrduVoice/2.0",
     }
     payload = {
         "text": text,
         "reference_id": model_id,
         "format": "mp3",
-        "language": "ur",
         "latency": "balanced",
         "prosody": {"speed": speed},
     }
@@ -541,35 +615,89 @@ async def _synthesize_fish_model(
         raise RuntimeError(f"Fish Audio model {model_id} error: {resp.status_code}")
 
 
-async def _synthesize_fish_base(text: str) -> bytes:
+async def _synthesize_fish_cloned(
+    text: str,
+    reference_audio_bytes: bytes,
+    reference_text: str,
+    speed: float = 1.0,
+) -> bytes:
+    """Clones the voice sample using Fish Audio s2.1-pro-free instant cloning.
+
+    Strictly uses ONLY the user's reference audio and exact transcript without any foreign speaker anchors.
+    """
+    if not FISH_AUDIO_API_KEY:
+        raise VoiceCloningError("FISH_AUDIO_API_KEY is not configured in .env.")
+
+    if not reference_audio_bytes or len(reference_audio_bytes) < 500:
+        raise VoiceCloningError("Reference audio is too short or empty for cloning.")
+
     headers = {
         "Authorization": f"Bearer {FISH_AUDIO_API_KEY}",
-        "Content-Type": "application/json",
-        "User-Agent": "Mozilla/5.0",
+        "Content-Type": "application/msgpack",
+        "model": FISH_FREE_MODEL,
+        "User-Agent": "VoiceDesk-UrduVoice/2.0",
     }
+
     payload = {
         "text": text,
         "format": "mp3",
-        "language": "ur",
+        "model": FISH_FREE_MODEL,
         "latency": "balanced",
+        "prosody": {"speed": speed},
+        "references": [
+            {
+                "audio": reference_audio_bytes,
+                "text": reference_text.strip() if reference_text else "",
+            }
+        ],
     }
-    async with httpx.AsyncClient(timeout=8.0) as client:
-        resp = await client.post(FISH_TTS_URL, headers=headers, json=payload)
+
+    packed_data = ormsgpack.packb(payload)
+
+    async with httpx.AsyncClient(timeout=15.0) as client:
+        resp = await client.post(FISH_TTS_URL, headers=headers, content=packed_data)
         if resp.status_code == 200:
-            return resp.content
-        raise RuntimeError(f"Fish Audio base error: {resp.status_code}")
+            if resp.content and len(resp.content) > 1000:
+                return resp.content
+            raise VoiceCloningError(f"Fish Audio returned incomplete audio data ({len(resp.content)} bytes).")
+        err_msg = f"Fish Audio HTTP {resp.status_code}: {resp.text[:200]}"
+        log.error("Fish Audio clone error: %s", err_msg)
+        raise VoiceCloningError(err_msg)
 
 
 async def _synthesize_edge_tts(text: str, voice: str, speed: float = 1.0) -> bytes:
     rate_str = "+0%"
-    if speed > 1.05:
-        rate_str = f"+{int((speed - 1.0) * 100)}%"
-    elif speed < 0.95:
-        rate_str = f"-{int((1.0 - speed) * 100)}%"
+    try:
+        sp = float(speed)
+        if sp > 1.05:
+            rate_str = f"+{int((sp - 1.0) * 100)}%"
+        elif sp < 0.95:
+            rate_str = f"-{int((1.0 - sp) * 100)}%"
+    except Exception:
+        rate_str = "+0%"
 
-    communicate = edge_tts.Communicate(text, voice, rate=rate_str)
-    buf = io.BytesIO()
-    async for chunk in communicate.stream():
-        if chunk["type"] == "audio":
-            buf.write(chunk["data"])
-    return buf.getvalue()
+    candidate_voices = [voice]
+    alt_voice = "ur-PK-AsadNeural" if "Uzma" in voice else "ur-PK-UzmaNeural"
+    candidate_voices.append(alt_voice)
+
+    last_err = None
+    for v in candidate_voices:
+        if v not in ("ur-PK-UzmaNeural", "ur-PK-AsadNeural"):
+            v = "ur-PK-UzmaNeural"
+        for attempt in range(2):
+            try:
+                communicate = edge_tts.Communicate(text, v, rate=rate_str)
+                buf = io.BytesIO()
+                async for chunk in communicate.stream():
+                    if chunk["type"] == "audio":
+                        buf.write(chunk["data"])
+                res = buf.getvalue()
+                if res and len(res) > 500:
+                    return res
+            except Exception as e:
+                last_err = e
+                await asyncio.sleep(0.4)
+
+    if last_err:
+        raise last_err
+    return b""

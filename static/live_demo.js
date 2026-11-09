@@ -26,14 +26,25 @@ document.addEventListener("DOMContentLoaded", () => {
   const sidebarVoiceSpeed = document.getElementById("sidebar-voice-speed");
   const sidebarSpeedVal = document.getElementById("sidebar-speed-val");
 
-  // Sidebar Voice Recording (Clone mode)
+  // Sidebar Voice Recording & Upload (Clone mode)
   const btnSidebarStartRecord = document.getElementById("btn-sidebar-start-record");
   const btnSidebarStopRecord = document.getElementById("btn-sidebar-stop-record");
   const btnSidebarRerecord = document.getElementById("btn-sidebar-rerecord");
+  const btnSidebarPurgeVoice = document.getElementById("btn-sidebar-purge-voice");
   const sidebarRecordTimer = document.getElementById("sidebar-record-timer");
   const sidebarWaveformCanvas = document.getElementById("sidebar-waveform-canvas");
   const sidebarVoicePreview = document.getElementById("sidebar-voice-preview");
   const sidebarPreviewAudio = document.getElementById("sidebar-preview-audio");
+  const btnMethodRecord = document.getElementById("btn-method-record");
+  const btnMethodUpload = document.getElementById("btn-method-upload");
+  const cloneRecordSection = document.getElementById("clone-record-section");
+  const cloneUploadSection = document.getElementById("clone-upload-section");
+  const sidebarVoiceFileInput = document.getElementById("sidebar-voice-file-input");
+  const btnSidebarBrowseAudio = document.getElementById("btn-sidebar-browse-audio");
+  const sidebarUploadFilename = document.getElementById("sidebar-upload-filename");
+  const sidebarTranscriptBox = document.getElementById("sidebar-transcript-box");
+  const sidebarReferenceTranscript = document.getElementById("sidebar-reference-transcript");
+  const transcriptStatusSpinner = document.getElementById("transcript-status-spinner");
 
   // Sidebar Business Inputs
   const inputBizName = document.getElementById("biz-name");
@@ -49,12 +60,18 @@ document.addEventListener("DOMContentLoaded", () => {
   // Right Console Elements
   const consoleAgentName = document.getElementById("console-agent-name");
   const consoleVoiceBadge = document.getElementById("console-voice-badge");
+  const consoleModelBadge = document.getElementById("console-model-badge");
+  const consoleStatusBadge = document.getElementById("console-status-badge");
   const consoleAgentTitle = document.getElementById("console-agent-title");
   const consoleBizName = document.getElementById("console-biz-name");
   const agentAvatarInitials = document.getElementById("agent-avatar-initials");
   const avatarLiveIndicator = document.getElementById("avatar-live-indicator");
   const callStatePill = document.getElementById("call-state-pill");
   const callStateLabel = document.getElementById("call-state-label");
+  const consoleErrorBanner = document.getElementById("console-error-banner");
+  const consoleErrorTitle = document.getElementById("console-error-title");
+  const consoleErrorMessage = document.getElementById("console-error-message");
+  const btnDismissError = document.getElementById("btn-dismiss-error");
 
   // Chat Viewport & Welcome
   const chatViewport = document.getElementById("chat-viewport");
@@ -142,12 +159,12 @@ document.addEventListener("DOMContentLoaded", () => {
     return audioContext;
   }
 
-  async function playAudioBuffer(base64Mp3) {
+  async function playAudioBuffer(base64Mp3, force = false) {
     if (!base64Mp3) return;
 
-    // Strict termination guard: do not play audio if user hung up
-    if (!isCallActive) {
-      console.log("Audio play ignored because call is not active.");
+    // Strict termination guard: do not play automatic live call audio if call ended
+    if (!isCallActive && !force) {
+      console.log("Audio play ignored because call is not active and force=false.");
       return;
     }
 
@@ -164,8 +181,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
       const audioBuffer = await ctx.decodeAudioData(bytes.buffer.slice(0));
 
-      // Re-verify call is still active after async decode
-      if (!isCallActive) return;
+      // Re-verify call is still active after async decode (unless forced preview)
+      if (!isCallActive && !force) return;
 
       const source = ctx.createBufferSource();
       source.buffer = audioBuffer;
@@ -325,17 +342,27 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function updateConsoleVoiceBadge() {
     if (activeVoiceMode === "clone") {
-      consoleVoiceBadge.textContent = "★ Zero-Shot Voice Clone";
+      consoleVoiceBadge.textContent = "Personal Cloned Voice";
+      if (consoleModelBadge) consoleModelBadge.textContent = "s2.1-pro-free";
+      if (consoleStatusBadge) {
+        consoleStatusBadge.textContent = recordedVoiceBlob ? "Ready to Apply" : "Sample Required";
+        consoleStatusBadge.style.background = "rgba(245, 158, 11, 0.15)";
+        consoleStatusBadge.style.color = "#d97706";
+      }
     } else {
       const selected = document.querySelector('input[name="preset-voice"]:checked')?.value || "ur-PK-UzmaNeural";
       if (selected.includes("Uzma")) {
         consoleVoiceBadge.textContent = "Studio Uzma (Lahori)";
       } else if (selected.includes("Asad")) {
         consoleVoiceBadge.textContent = "Studio Asad (Islamabad)";
-      } else if (selected.includes("aiza")) {
-        consoleVoiceBadge.textContent = "Studio Aiza (Lahori • Fish Audio)";
       } else {
         consoleVoiceBadge.textContent = "Studio Pakistani Neural";
+      }
+      if (consoleModelBadge) consoleModelBadge.textContent = selected;
+      if (consoleStatusBadge) {
+        consoleStatusBadge.textContent = "Preset Ready";
+        consoleStatusBadge.style.background = "rgba(59, 130, 246, 0.15)";
+        consoleStatusBadge.style.color = "#2563eb";
       }
     }
   }
@@ -398,7 +425,7 @@ document.addEventListener("DOMContentLoaded", () => {
         if (e.data.size > 0) chunks.push(e.data);
       };
 
-      mediaRecorder.onstop = () => {
+      mediaRecorder.onstop = async () => {
         recordedVoiceBlob = new Blob(chunks, { type: "audio/wav" });
         sidebarPreviewAudio.src = URL.createObjectURL(recordedVoiceBlob);
         sidebarVoicePreview.style.display = "flex";
@@ -413,6 +440,9 @@ document.addEventListener("DOMContentLoaded", () => {
           cancelAnimationFrame(waveformAnimId);
           waveformAnimId = null;
         }
+
+        updateConsoleVoiceBadge();
+        await autoTranscribeReferenceAudio(recordedVoiceBlob);
       };
 
       mediaRecorder.start();
@@ -464,11 +494,122 @@ document.addEventListener("DOMContentLoaded", () => {
 
   btnSidebarStopRecord.addEventListener("click", stopSidebarRecording);
 
+  // Switch between Mic Record & File Upload
+  if (btnMethodRecord && btnMethodUpload) {
+    btnMethodRecord.addEventListener("click", () => {
+      btnMethodRecord.classList.add("active");
+      btnMethodUpload.classList.remove("active");
+      if (cloneRecordSection) cloneRecordSection.style.display = "block";
+      if (cloneUploadSection) cloneUploadSection.style.display = "none";
+    });
+    btnMethodUpload.addEventListener("click", () => {
+      btnMethodUpload.classList.add("active");
+      btnMethodRecord.classList.remove("active");
+      if (cloneUploadSection) cloneUploadSection.style.display = "block";
+      if (cloneRecordSection) cloneRecordSection.style.display = "none";
+    });
+  }
+
+  // Audio File Browser Trigger
+  if (btnSidebarBrowseAudio && sidebarVoiceFileInput) {
+    btnSidebarBrowseAudio.addEventListener("click", () => {
+      sidebarVoiceFileInput.click();
+    });
+    sidebarVoiceFileInput.addEventListener("change", async (e) => {
+      const file = e.target.files[0];
+      if (file) {
+        recordedVoiceBlob = file;
+        if (sidebarUploadFilename) {
+          sidebarUploadFilename.textContent = `Selected: ${file.name} (${(file.size / 1024).toFixed(1)} KB)`;
+        }
+        sidebarPreviewAudio.src = URL.createObjectURL(file);
+        sidebarVoicePreview.style.display = "flex";
+        updateConsoleVoiceBadge();
+        await autoTranscribeReferenceAudio(file);
+      }
+    });
+  }
+
+  async function autoTranscribeReferenceAudio(blob) {
+    if (!blob) return;
+    if (sidebarTranscriptBox) sidebarTranscriptBox.style.display = "block";
+    if (transcriptStatusSpinner) transcriptStatusSpinner.style.display = "inline";
+    if (sidebarReferenceTranscript) sidebarReferenceTranscript.placeholder = "Transcribing with Groq Whisper for forced alignment...";
+
+    try {
+      const fd = new FormData();
+      fd.append("voice_file", blob, "reference_sample.wav");
+      const res = await fetch("/api/demo/transcribe-reference", {
+        method: "POST",
+        body: fd,
+      });
+      const data = await res.json();
+      if (data.success && data.transcript) {
+        if (sidebarReferenceTranscript) sidebarReferenceTranscript.value = data.transcript;
+      } else {
+        if (sidebarReferenceTranscript) sidebarReferenceTranscript.placeholder = "Could not automatically transcribe. Please type what was spoken in Urdu script:";
+      }
+    } catch (err) {
+      console.warn("Auto-transcription error:", err);
+      if (sidebarReferenceTranscript) sidebarReferenceTranscript.placeholder = "Transcription service unavailable. Please type what was spoken in Urdu script:";
+    } finally {
+      if (transcriptStatusSpinner) transcriptStatusSpinner.style.display = "none";
+    }
+  }
+
   btnSidebarRerecord.addEventListener("click", () => {
     sidebarVoicePreview.style.display = "none";
     recordedVoiceBlob = null;
     sidebarRecordTimer.textContent = "00:00 / 00:30";
+    if (sidebarTranscriptBox) sidebarTranscriptBox.style.display = "none";
+    if (sidebarReferenceTranscript) sidebarReferenceTranscript.value = "";
+    if (sidebarUploadFilename) sidebarUploadFilename.textContent = "";
+    if (sidebarVoiceFileInput) sidebarVoiceFileInput.value = "";
+    updateConsoleVoiceBadge();
   });
+
+  if (btnSidebarPurgeVoice) {
+    btnSidebarPurgeVoice.addEventListener("click", async () => {
+      if (confirm("Delete your voice sample and clear cached audio from the server?")) {
+        try {
+          const fd = new FormData();
+          if (currentSessionId) fd.append("session_id", currentSessionId);
+          await fetch("/api/demo/delete-voice", { method: "POST", body: fd });
+          recordedVoiceBlob = null;
+          sidebarPreviewAudio.src = "";
+          sidebarVoicePreview.style.display = "none";
+          if (sidebarTranscriptBox) sidebarTranscriptBox.style.display = "none";
+          if (sidebarReferenceTranscript) sidebarReferenceTranscript.value = "";
+          if (sidebarUploadFilename) sidebarUploadFilename.textContent = "";
+          if (sidebarVoiceFileInput) sidebarVoiceFileInput.value = "";
+          sidebarRecordTimer.textContent = "00:00 / 00:30";
+          updateConsoleVoiceBadge();
+          showErrorBanner("Voice Data Purged", "Your reference voice recording and audio cache have been cleared.");
+          setTimeout(() => hideErrorBanner(), 4000);
+        } catch (e) {
+          alert("Error deleting voice: " + e.message);
+        }
+      }
+    });
+  }
+
+  function showErrorBanner(title, msg) {
+    if (consoleErrorBanner && consoleErrorMessage) {
+      if (consoleErrorTitle) consoleErrorTitle.textContent = title;
+      consoleErrorMessage.textContent = msg;
+      consoleErrorBanner.style.display = "block";
+    }
+  }
+
+  function hideErrorBanner() {
+    if (consoleErrorBanner) {
+      consoleErrorBanner.style.display = "none";
+    }
+  }
+
+  if (btnDismissError) {
+    btnDismissError.addEventListener("click", hideErrorBanner);
+  }
 
   // =========================================================================
   // 5. Apply & Save Agent Profile (Session Initialization)
@@ -508,7 +649,6 @@ document.addEventListener("DOMContentLoaded", () => {
     consoleAgentTitle.textContent = `${agentRole} • `;
     consoleBizName.textContent = bizName;
     agentAvatarInitials.textContent = agentName.slice(0, 2).toUpperCase();
-    updateConsoleVoiceBadge();
 
     const formData = new FormData();
     formData.append("agent_name", agentName);
@@ -526,6 +666,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
     if (activeVoiceMode === "clone" && recordedVoiceBlob) {
       formData.append("voice_file", recordedVoiceBlob, "voice_reference.wav");
+      const reviewedTranscript = sidebarReferenceTranscript ? sidebarReferenceTranscript.value.trim() : "";
+      if (reviewedTranscript) {
+        formData.append("reference_transcript", reviewedTranscript);
+      }
     }
 
     if (userClicked) {
@@ -544,6 +688,32 @@ document.addEventListener("DOMContentLoaded", () => {
       const data = await res.json();
       currentSessionId = data.session_id;
       welcomeAudioB64 = data.welcome_audio_b64 || "";
+
+      // Error / Status feedback
+      if (data.error) {
+        showErrorBanner("Voice Generation Notice", data.error);
+      } else {
+        hideErrorBanner();
+      }
+
+      // Update Console Badges
+      if (consoleVoiceBadge) consoleVoiceBadge.textContent = data.voice_label || "Studio Uzma (Lahori)";
+      if (consoleModelBadge) consoleModelBadge.textContent = data.voice_model || (activeVoiceMode === "clone" ? "s2.1-pro-free" : presetVoice);
+      if (consoleStatusBadge) {
+        if (data.cloning_status === "active") {
+          consoleStatusBadge.textContent = "Cloned Active";
+          consoleStatusBadge.style.background = "rgba(16, 185, 129, 0.15)";
+          consoleStatusBadge.style.color = "#059669";
+        } else if (data.cloning_status === "failed") {
+          consoleStatusBadge.textContent = "Cloning Failed";
+          consoleStatusBadge.style.background = "rgba(239, 68, 68, 0.15)";
+          consoleStatusBadge.style.color = "#dc2626";
+        } else {
+          consoleStatusBadge.textContent = "Preset Ready";
+          consoleStatusBadge.style.background = "rgba(59, 130, 246, 0.15)";
+          consoleStatusBadge.style.color = "#2563eb";
+        }
+      }
 
       // Update welcome bubble
       welcomeSpeakerLabel.textContent = `${data.agent_name || agentName} • ${agentRole}`;
@@ -575,7 +745,7 @@ document.addEventListener("DOMContentLoaded", () => {
   btnPlayWelcome.addEventListener("click", () => {
     if (welcomeAudioB64) {
       const ctx = getAudioContext();
-      playAudioBuffer(welcomeAudioB64);
+      playAudioBuffer(welcomeAudioB64, true);
     }
   });
 
@@ -858,6 +1028,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
       const data = await res.json();
 
+      if (data.error) {
+        showErrorBanner("Voice Synthesis Notice", data.error);
+      }
+
       // Guard: do not display or speak if user hung up while request was in-flight
       if (!isCallActive && !textChatInput) return;
 
@@ -929,7 +1103,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (role === "agent" && audioB64) {
       const btn = row.querySelector(".btn-play-voice");
       btn?.addEventListener("click", () => {
-        playAudioBuffer(audioB64);
+        playAudioBuffer(audioB64, true);
       });
     }
 

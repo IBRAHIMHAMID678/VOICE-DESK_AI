@@ -184,40 +184,95 @@ async def demo_page(request: Request):
 
 
 def _normalize_confirmed_items(items, business_services):
-    """Ensure items list contains proper dicts with price_pkr mapped from business services."""
+    """Ensure items list strictly matches configured business services.
+    Never fabricates unverified services or default Rs 1500 prices."""
     services = business_services or []
     price_map = {}
     for s in services:
         if isinstance(s, dict):
             s_name = s.get("name", "").strip().lower()
-            price_map[s_name] = int(s.get("price_pkr", 0))
-
-    default_price = services[0].get("price_pkr", 1500) if services and isinstance(services[0], dict) else 1500
+            p = s.get("price_pkr")
+            if s_name:
+                price_map[s_name] = int(p) if (p is not None and str(p).isdigit()) else 0
 
     normalized = []
-    raw_list = items if (items and len(items) > 0) else services[:2]
+    raw_list = items if (items and len(items) > 0) else []
     for it in raw_list:
         if isinstance(it, str):
             clean_name = it.strip()
-            # Try exact match or substring in service names
+            # Match against verified business services
             pkr = price_map.get(clean_name.lower())
             if pkr is None:
                 for k, v in price_map.items():
                     if k in clean_name.lower() or clean_name.lower() in k:
+                        clean_name = k.title()
                         pkr = v
                         break
-            if pkr is None:
-                pkr = default_price
-            normalized.append({"name": clean_name, "qty": 1, "price_pkr": pkr})
+            if pkr is not None:
+                normalized.append({"name": clean_name, "qty": 1, "price_pkr": pkr})
         elif isinstance(it, dict):
-            name = str(it.get("name") or it.get("item") or "Service Item")
+            name = str(it.get("name") or it.get("item") or "").strip()
             qty = int(it.get("qty", 1))
             pkr = it.get("price_pkr")
-            if pkr is None:
-                pkr = price_map.get(name.strip().lower(), default_price)
-            normalized.append({"name": name, "qty": qty, "price_pkr": int(pkr)})
+            if pkr is None and name:
+                pkr = price_map.get(name.lower())
+                if pkr is None:
+                    for k, v in price_map.items():
+                        if k in name.lower() or name.lower() in k:
+                            pkr = v
+                            break
+            if name and pkr is not None:
+                normalized.append({"name": name, "qty": qty, "price_pkr": int(pkr)})
 
-    return normalized or [{"name": "Appointment / Service", "qty": 1, "price_pkr": default_price}]
+    return normalized
+
+
+@router.post("/api/demo/transcribe-reference")
+async def transcribe_reference_endpoint(
+    voice_file: UploadFile = File(...),
+):
+    """Transcribes an uploaded voice sample with Groq Whisper for user review.
+
+    Allows the user to review, edit, and confirm the Urdu transcript before activating
+    instant voice cloning, ensuring high quality forced alignment.
+    """
+    try:
+        raw_content = await voice_file.read()
+        if not raw_content or len(raw_content) < 500:
+            return {"success": False, "error": "Uploaded audio file is too short or empty."}
+
+        mp3_bytes = voice_service.sanitize_audio_to_mp3(raw_content)
+        transcript = await voice_service.transcribe_reference_audio(mp3_bytes)
+        return {
+            "success": True,
+            "transcript": transcript,
+            "audio_len": len(mp3_bytes),
+            "filename": voice_file.filename,
+        }
+    except Exception as e:
+        log.warning("Reference audio transcription failed: %s", e)
+        return {"success": False, "error": str(e)}
+
+
+@router.post("/api/demo/delete-voice")
+async def delete_user_voice(
+    session_id: str = Form(None),
+):
+    """Removes stored voice recordings and clears audio cache for user privacy compliance."""
+    try:
+        deleted = voice_service.delete_voice_cache()
+        if session_id and session_id in SESSIONS:
+            SESSIONS[session_id]["reference_bytes"] = None
+            SESSIONS[session_id]["reference_text"] = None
+            SESSIONS[session_id]["profile"]["voice_mode"] = "preset"
+        return {
+            "success": True,
+            "message": "Voice reference data and audio cache purged successfully.",
+            "purged_records": deleted,
+        }
+    except Exception as e:
+        log.warning("Error purging voice data: %s", e)
+        return {"success": False, "error": str(e)}
 
 
 @router.post("/api/demo/session")
@@ -234,6 +289,7 @@ async def create_demo_session(
     voice_mode: str = Form("preset"),
     preset_voice: str = Form("ur-PK-UzmaNeural"),
     voice_speed: float = Form(1.0),
+    reference_transcript: str = Form(None),
     voice_file: UploadFile | None = File(None),
 ):
     """Initialize a dedicated custom voice agent session."""
@@ -242,7 +298,7 @@ async def create_demo_session(
     try:
         services = json.loads(services_json)
     except Exception:
-        services = [{"name": "Consultation", "price_pkr": 1500, "duration_min": 30}]
+        services = []
 
     profile = {
         "id": f"agent-{session_id}",
@@ -261,20 +317,25 @@ async def create_demo_session(
     }
 
     reference_bytes = None
-    reference_text = None
+    reference_text = (reference_transcript or "").strip() or None
 
     if voice_file and voice_mode == "clone":
         raw_content = await voice_file.read()
-        if len(raw_content) > 1000:
+        if len(raw_content) > 500:
             reference_bytes = voice_service.sanitize_audio_to_mp3(raw_content)
-            # Transcribe the user's reference speech with Groq Whisper for 100% accurate alignment
-            reference_text = await voice_service.transcribe_reference_audio(reference_bytes)
+            # If user didn't pre-supply reviewed transcript, transcribe with Groq Whisper
+            if not reference_text:
+                try:
+                    reference_text = await voice_service.transcribe_reference_audio(reference_bytes)
+                except Exception as e:
+                    log.warning("Whisper reference transcription warning: %s", e)
+                    reference_text = "السلام علیکم! ہم کسٹمر سروس اور معلومات فراہم کرتے ہیں۔"
             log.info(
-                "Voice sample ingested for session %s (%d bytes -> %d bytes, transcript: %s)",
+                "Voice sample ingested for session %s (%d raw bytes -> %d mp3 bytes, transcript: %s)",
                 session_id,
                 len(raw_content),
                 len(reference_bytes),
-                reference_text[:40],
+                (reference_text or "")[:40],
             )
 
     SESSIONS[session_id] = {
@@ -289,14 +350,55 @@ async def create_demo_session(
     welcome_roman, welcome_urdu = await llm_service.generate_dynamic_greeting(profile)
 
     # Synthesize opening greeting
-    audio_bytes = await voice_service.synthesize_speech(
-        text=welcome_urdu,
-        reference_audio_bytes=reference_bytes,
-        reference_text=reference_text,
-        fallback_voice=preset_voice,
-        speed=voice_speed,
-    )
-    audio_b64 = base64.b64encode(audio_bytes).decode("utf-8") if audio_bytes else ""
+    audio_b64 = ""
+    cloning_status = "none"
+    cloning_error = None
+    voice_label = "Studio Aiza (Lahori)" if preset_voice == "fish-aiza" else f"Studio {preset_voice}"
+    voice_provider = "Fish Audio" if preset_voice == "fish-aiza" else "Microsoft Edge Neural"
+    voice_model = preset_voice
+
+    if voice_mode == "clone" and reference_bytes:
+        voice_provider = "Fish Audio"
+        voice_model = voice_service.FISH_FREE_MODEL
+        try:
+            audio_bytes = await voice_service.synthesize_speech(
+                text=welcome_urdu,
+                reference_audio_bytes=reference_bytes,
+                reference_text=reference_text,
+                fallback_voice=preset_voice,
+                speed=voice_speed,
+                allow_fallback=False,
+            )
+            if audio_bytes:
+                audio_b64 = base64.b64encode(audio_bytes).decode("utf-8")
+                cloning_status = "active"
+                voice_label = "Personal Cloned Voice (Fish Audio s2.1-pro-free)"
+        except voice_service.VoiceCloningError as ve:
+            log.error("Voice cloning failed on session initialization: %s", ve)
+            cloning_status = "failed"
+            cloning_error = str(ve)
+            voice_label = "Cloning Failed (Provider Error)"
+        except Exception as e:
+            log.error("Unexpected synthesis error on session init: %s", e)
+            cloning_status = "failed"
+            cloning_error = str(e)
+            voice_label = "Cloning Failed"
+    else:
+        # Standard Preset Mode
+        try:
+            audio_bytes = await voice_service.synthesize_speech(
+                text=welcome_urdu,
+                reference_audio_bytes=None,
+                reference_text=None,
+                fallback_voice=preset_voice,
+                speed=voice_speed,
+                allow_fallback=True,
+            )
+            if audio_bytes:
+                audio_b64 = base64.b64encode(audio_bytes).decode("utf-8")
+                cloning_status = "preset"
+        except Exception as e:
+            log.warning("Preset greeting synthesis warning: %s", e)
 
     SESSIONS[session_id]["history"].append({"role": "assistant", "content": welcome_roman})
 
@@ -305,9 +407,14 @@ async def create_demo_session(
         "agent_name": profile["agent_name"],
         "welcome_text": welcome_roman,
         "welcome_audio_b64": audio_b64,
-        "has_custom_voice": bool(reference_bytes),
+        "has_custom_voice": (cloning_status == "active"),
         "voice_mode": voice_mode,
-        "voice_label": "Zero-Shot Cloned Voice (Aiza Anchor)" if reference_bytes else ("Studio Aiza (Lahori)" if preset_voice == "fish-aiza" else f"Studio {preset_voice}"),
+        "voice_label": voice_label,
+        "voice_provider": voice_provider,
+        "voice_model": voice_model,
+        "cloning_status": cloning_status,
+        "reference_transcript": reference_text or "",
+        "error": cloning_error,
     }
 
 
@@ -334,32 +441,45 @@ async def demo_chat(
     session["history"].append({"role": "assistant", "content": reply_roman})
 
     # Synthesize speech
-    audio_bytes = await voice_service.synthesize_speech(
-        text=reply_urdu,
-        reference_audio_bytes=session.get("reference_bytes"),
-        reference_text=session.get("reference_text"),
-        fallback_voice=p.get("preset_voice", "ur-PK-UzmaNeural"),
-        speed=p.get("voice_speed", 1.0),
-    )
+    is_clone = (p.get("voice_mode") == "clone" and session.get("reference_bytes"))
+    audio_bytes = b""
+    voice_error = None
+    try:
+        audio_bytes = await voice_service.synthesize_speech(
+            text=reply_urdu,
+            reference_audio_bytes=session.get("reference_bytes") if is_clone else None,
+            reference_text=session.get("reference_text") if is_clone else None,
+            fallback_voice=p.get("preset_voice", "ur-PK-UzmaNeural"),
+            speed=p.get("voice_speed", 1.0),
+            allow_fallback=not is_clone,
+        )
+    except voice_service.VoiceCloningError as ve:
+        log.error("Voice cloning turn failed: %s", ve)
+        voice_error = str(ve)
+    except Exception as e:
+        log.error("Speech synthesis turn failed: %s", e)
+        voice_error = str(e)
+
     audio_b64 = base64.b64encode(audio_bytes).decode("utf-8") if audio_bytes else ""
 
-    # Receipt generation if order/booking was confirmed
+    # Receipt generation if order/booking was verified against actual business services
     receipt_data = None
     receipt_b64 = ""
     if meta.get("booking_confirmed"):
         items = _normalize_confirmed_items(meta.get("confirmed_items"), p.get("services", []))
-        receipt_dict = {
-            "business_name": p["name"],
-            "category": p["category"],
-            "location": p["location"],
-            "agent_name": p["agent_name"],
-            "customer_name": "Caller",
-            "items": items,
-            "status": "BOOKING CONFIRMED",
-        }
-        receipt_b64 = receipt_service.receipt_to_base64(receipt_dict)
-        receipt_data = receipt_dict
-        session["receipts"].append(receipt_dict)
+        if items:
+            receipt_dict = {
+                "business_name": p["name"],
+                "category": p["category"],
+                "location": p["location"],
+                "agent_name": p["agent_name"],
+                "customer_name": "Caller",
+                "items": items,
+                "status": "BOOKING CONFIRMED",
+            }
+            receipt_b64 = receipt_service.receipt_to_base64(receipt_dict)
+            receipt_data = receipt_dict
+            session["receipts"].append(receipt_dict)
 
     return {
         "reply_text": reply_roman,
@@ -407,14 +527,27 @@ async def live_call_websocket(websocket: WebSocket, session_id: str):
                     "text": reply_roman,
                 })
 
-                # Synthesize audio (guaranteed non-empty via resilient fallback)
-                audio_bytes = await voice_service.synthesize_speech(
-                    text=reply_urdu,
-                    reference_audio_bytes=session.get("reference_bytes"),
-                    reference_text=session.get("reference_text"),
-                    fallback_voice=p.get("preset_voice", "ur-PK-UzmaNeural"),
-                    speed=p.get("voice_speed", 1.0),
-                )
+                # Synthesize audio with strict clone mode honesty
+                is_clone = (p.get("voice_mode") == "clone" and session.get("reference_bytes"))
+                audio_bytes = b""
+                try:
+                    audio_bytes = await voice_service.synthesize_speech(
+                        text=reply_urdu,
+                        reference_audio_bytes=session.get("reference_bytes") if is_clone else None,
+                        reference_text=session.get("reference_text") if is_clone else None,
+                        fallback_voice=p.get("preset_voice", "ur-PK-UzmaNeural"),
+                        speed=p.get("voice_speed", 1.0),
+                        allow_fallback=not is_clone,
+                    )
+                except voice_service.VoiceCloningError as ve:
+                    log.error("WebSocket clone turn failed: %s", ve)
+                    await websocket.send_json({
+                        "type": "error",
+                        "message": f"Cloned voice synthesis error: {ve}. Fallback voice withheld to preserve authentic vocal identity.",
+                    })
+                except Exception as e:
+                    log.error("WebSocket synthesis turn failed: %s", e)
+
                 audio_b64 = base64.b64encode(audio_bytes).decode("utf-8") if audio_bytes else ""
 
                 await websocket.send_json({
@@ -423,26 +556,27 @@ async def live_call_websocket(websocket: WebSocket, session_id: str):
                     "audio_b64": audio_b64,
                 })
 
-                # Check if booking / order was confirmed
+                # Check if booking / order was confirmed against verified business services
                 if meta.get("booking_confirmed"):
                     items = _normalize_confirmed_items(meta.get("confirmed_items"), p.get("services", []))
-                    receipt_dict = {
-                        "business_name": p["name"],
-                        "category": p["category"],
-                        "location": p["location"],
-                        "agent_name": p["agent_name"],
-                        "customer_name": "Customer",
-                        "items": items,
-                        "status": "BOOKING CONFIRMED",
-                    }
-                    r_b64 = receipt_service.receipt_to_base64(receipt_dict)
-                    session["receipts"].append(receipt_dict)
+                    if items:
+                        receipt_dict = {
+                            "business_name": p["name"],
+                            "category": p["category"],
+                            "location": p["location"],
+                            "agent_name": p["agent_name"],
+                            "customer_name": "Customer",
+                            "items": items,
+                            "status": "BOOKING CONFIRMED",
+                        }
+                        r_b64 = receipt_service.receipt_to_base64(receipt_dict)
+                        session["receipts"].append(receipt_dict)
 
-                    await websocket.send_json({
-                        "type": "receipt_generated",
-                        "receipt_b64": r_b64,
-                        "receipt_data": receipt_dict,
-                    })
+                        await websocket.send_json({
+                            "type": "receipt_generated",
+                            "receipt_b64": r_b64,
+                            "receipt_data": receipt_dict,
+                        })
 
             elif msg_type == "interruption":
                 await websocket.send_json({"type": "stop_audio"})
