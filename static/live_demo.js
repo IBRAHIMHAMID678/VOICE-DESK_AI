@@ -332,6 +332,8 @@ document.addEventListener("DOMContentLoaded", () => {
         consoleVoiceBadge.textContent = "Studio Uzma (Lahori)";
       } else if (selected.includes("Asad")) {
         consoleVoiceBadge.textContent = "Studio Asad (Islamabad)";
+      } else if (selected.includes("aiza")) {
+        consoleVoiceBadge.textContent = "Studio Aiza (Lahori • Fish Audio)";
       } else {
         consoleVoiceBadge.textContent = "Studio Pakistani Neural";
       }

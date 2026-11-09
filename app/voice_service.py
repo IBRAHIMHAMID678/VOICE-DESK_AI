@@ -37,6 +37,7 @@ if _env_file.exists():
 FISH_AUDIO_API_KEY = os.getenv("FISH_AUDIO_API_KEY", "")
 GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
 FISH_TTS_URL = "https://api.fish.audio/v1/tts"
+AIZA_MODEL_ID = "cdd7d48d6038403199a3085b4e09547e"  # Native Lahori Pakistani accent model
 CACHE_DIR = Path(__file__).resolve().parent.parent / "data" / "audio_cache"
 CACHE_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -417,7 +418,7 @@ async def synthesize_speech(
         except Exception:
             pass
 
-    # 1. If user provided a reference voice sample, use Fish Audio zero-shot cloning with Urdu anchor
+    # 1. If user provided a reference voice sample, use Fish Audio zero-shot cloning anchored to Aiza (Lahori)
     if reference_audio_bytes and FISH_AUDIO_API_KEY:
         try:
             audio_bytes = await _synthesize_fish_cloned(
@@ -431,9 +432,25 @@ async def synthesize_speech(
                 disk_path.write_bytes(audio_bytes)
                 return audio_bytes
         except Exception as e:
-            log.warning("Fish Audio clone failed: %s; falling back to Pakistani Neural voice", e)
+            log.warning("Fish Audio anchored clone failed: %s; falling back to Pakistani Neural voice", e)
 
-    # 2. Native Pakistani Neural voice (edge-tts 7.3+)
+    # 2. If user selected Aiza (Fish Audio Lahori voice)
+    if fallback_voice == "fish-aiza" and FISH_AUDIO_API_KEY:
+        try:
+            audio_bytes = await _synthesize_fish_model(
+                text=tts_text,
+                model_id=AIZA_MODEL_ID,
+                speed=speed,
+            )
+            if audio_bytes and len(audio_bytes) > 1000:
+                _MEM_CACHE[cache_key] = audio_bytes
+                disk_path.write_bytes(audio_bytes)
+                return audio_bytes
+        except Exception as e:
+            log.warning("Fish Audio Aiza synthesis failed: %s; falling back to Uzma", e)
+            fallback_voice = "ur-PK-UzmaNeural"
+
+    # 3. Native Pakistani Neural voice (edge-tts 7.3+)
     try:
         audio_bytes = await _synthesize_edge_tts(tts_text, fallback_voice, speed=speed)
         if audio_bytes and len(audio_bytes) > 1000:
@@ -443,7 +460,7 @@ async def synthesize_speech(
     except Exception as e:
         log.warning("Edge-TTS Pakistani Neural synthesis failed: %s; attempting base voice", e)
 
-    # 3. Last-ditch Fish Audio base voice
+    # 4. Last-ditch Fish Audio base voice
     if FISH_AUDIO_API_KEY:
         try:
             audio_bytes = await _synthesize_fish_base(tts_text)
@@ -463,7 +480,7 @@ async def _synthesize_fish_cloned(
     reference_text: str | None = None,
     speed: float = 1.0,
 ) -> bytes:
-    """Clones the voice sample using Fish Audio MessagePack protocol with language='ur'."""
+    """Clones the voice sample using Fish Audio anchored to the Aiza Lahori model to eliminate American accent."""
     headers = {
         "Authorization": f"Bearer {FISH_AUDIO_API_KEY}",
         "Content-Type": "application/msgpack",
@@ -472,6 +489,7 @@ async def _synthesize_fish_cloned(
 
     payload = {
         "text": text,
+        "reference_id": AIZA_MODEL_ID,  # Pakistani Lahori accent anchor
         "format": "mp3",
         "language": "ur",
         "latency": "balanced",
@@ -488,13 +506,39 @@ async def _synthesize_fish_cloned(
 
     packed_data = ormsgpack.packb(payload)
 
-    # Fast 8.0s timeout so consecutive turns never hang
-    async with httpx.AsyncClient(timeout=8.0) as client:
+    # 12.0s timeout so consecutive turns never hang
+    async with httpx.AsyncClient(timeout=12.0) as client:
         resp = await client.post(FISH_TTS_URL, headers=headers, content=packed_data)
         if resp.status_code == 200:
             return resp.content
         log.warning("Fish Audio clone returned HTTP %s: %s", resp.status_code, resp.text[:200])
         raise RuntimeError(f"Fish Audio error: {resp.status_code}")
+
+
+async def _synthesize_fish_model(
+    text: str,
+    model_id: str = AIZA_MODEL_ID,
+    speed: float = 1.0,
+) -> bytes:
+    """Synthesizes speech using a specific Fish Audio voice model ID (such as Aiza)."""
+    headers = {
+        "Authorization": f"Bearer {FISH_AUDIO_API_KEY}",
+        "Content-Type": "application/json",
+        "User-Agent": "Mozilla/5.0",
+    }
+    payload = {
+        "text": text,
+        "reference_id": model_id,
+        "format": "mp3",
+        "language": "ur",
+        "latency": "balanced",
+        "prosody": {"speed": speed},
+    }
+    async with httpx.AsyncClient(timeout=12.0) as client:
+        resp = await client.post(FISH_TTS_URL, headers=headers, json=payload)
+        if resp.status_code == 200:
+            return resp.content
+        raise RuntimeError(f"Fish Audio model {model_id} error: {resp.status_code}")
 
 
 async def _synthesize_fish_base(text: str) -> bytes:

@@ -307,7 +307,7 @@ async def create_demo_session(
         "welcome_audio_b64": audio_b64,
         "has_custom_voice": bool(reference_bytes),
         "voice_mode": voice_mode,
-        "voice_label": "Zero-Shot Cloned Voice" if reference_bytes else f"Studio {preset_voice}",
+        "voice_label": "Zero-Shot Cloned Voice (Aiza Anchor)" if reference_bytes else ("Studio Aiza (Lahori)" if preset_voice == "fish-aiza" else f"Studio {preset_voice}"),
     }
 
 

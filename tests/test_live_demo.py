@@ -279,3 +279,21 @@ def test_tools_catalog_and_simulation_endpoints():
         assert rcpt_res["status"] == "success"
         assert len(rcpt_res["simulation_result"]["receipt_b64"]) > 5000
 
+
+def test_aiza_fish_voice_session():
+    """Verify that Aiza (Fish Audio Lahori preset) can initialize a session with synthesized audio."""
+    with TestClient(app) as client:
+        res = client.post("/api/demo/session", data={
+            "agent_name": "Aiza",
+            "business_name": "Lahore Aesthetics",
+            "category": "Clinic",
+            "location": "Gulberg, Lahore",
+            "voice_mode": "preset",
+            "preset_voice": "fish-aiza"
+        })
+        assert res.status_code == 200
+        data = res.json()
+        assert "Studio Aiza" in data.get("voice_label", "")
+        assert len(data.get("welcome_audio_b64", "")) > 1000
+
+
