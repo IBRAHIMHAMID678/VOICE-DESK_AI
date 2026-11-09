@@ -1,176 +1,242 @@
-# Voice Receptionist — Urdu AI front desk for local businesses
+# VoiceDesk AI — Authentic Pakistani Urdu Voice AI Receptionist & Business Automation Platform
 
-An AI receptionist that answers a business's WhatsApp number in **Urdu**,
-**Roman Urdu**, or **English** — by text or voice note. It books appointments
-from natural language ("kal shaam 5 baje", "کل شام ۵ بجے", "tomorrow at 5pm"),
-captures leads, notifies the owner, and ships with a dashboard a
-non-technical owner can actually use.
+[![Tests](https://img.shields.io/badge/pytest-11%20passed-emerald)](tests/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.141.1-009688)](https://fastapi.tiangolo.com)
+[![Voice Models](https://img.shields.io/badge/Voices-Aiza%20%7C%20Uzma%20%7C%20Asad%20%7C%20Cloned-blue)]()
+[![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-Built for the Groq free tier: Whisper `whisper-large-v3-turbo` for speech,
-`openai/gpt-oss-120b` for chat, `edge-tts` for Urdu voice replies.
+**VoiceDesk AI** is an enterprise-grade AI voice receptionist and multichannel customer interaction platform built specifically for Pakistani businesses (Clinics, Restaurants, Salons, Real Estate, Retail, and Customer Support). 
 
-## Screenshots
+It answers customer inquiries, schedules appointments, takes itemized orders, processes physical receipts, and conducts **live, continuous phone conversations in authentic conversational Pakistani Urdu and Roman Urdu**—with **zero robotic or American phonetic distortion**.
 
-| Dashboard — conversations | Bookings — week view & owner summary | Settings — client config editor |
-|---|---|---|
-| ![Dashboard](docs/screenshots/dashboard.png) | ![Bookings](docs/screenshots/bookings.png) | ![Settings](docs/screenshots/settings.png) |
+---
 
-## Architecture
+## Visual Showcase & Screenshots
+
+### 1. Executive SaaS Landing Page (`/`)
+*Balanced mid-tone executive presentation featuring multichannel versatility, industry bento grid, technology pillars, and interactive ROI calculator.*
+![VoiceDesk AI Landing Page](docs/screenshots/landing_page.png)
+
+---
+
+### 2. Live Voice Studio & Phone Simulator (`/demo`)
+*Interactive phone simulator with real-time waveform visualizer, persona configuration, zero-shot voice cloning, and unified in-chat transcript.*
+![Voice Studio](docs/screenshots/voice_studio.png)
+
+---
+
+### 3. Modular Business Tools & Integrations Marketplace (`/demo#tab-tools`)
+*8 pluggable business tools with real-time connection toggles and interactive simulation execution.*
+![Tools Marketplace](docs/screenshots/tools_marketplace.png)
+
+---
+
+### 4. Thermal Paper Receipts & Multimodal Vision OCR Inspector (`/demo#tab-receipts`)
+*Pixel-perfect 58mm monospace thermal receipt generation with QR code and multimodal Vision OCR extraction.*
+![OCR Inspector](docs/screenshots/ocr_inspector.png)
+
+---
+
+### 5. Business Console Authentication (`/login`)
+*Secure business admin sign-in with 1-click instant demo access presets (Dental Clinic & Restaurant Manager).*
+![Business Login Console](docs/screenshots/login_console.png)
+
+---
+
+## Core Capabilities & Technical Innovations
+
+### 1. Authentic Pakistani Accents & Conversational Dialects
+* **No Textbook Slop**: Completely eliminated stiff, archaic words like *"Khushamdeed"* or *"Tashkhees"*.
+* **Natural Everyday Colloquialisms**: Embedded genuine Pakistani telephone etiquette:
+  * Greeting: *"Assalam-o-Alaikum ji! [Biz], [Agent] baat kar rahi hoon. Ji batayein, kis cheez mein help chahiye?"*
+  * Affirmations: *"Ji haan ji bilkul"*, *"Theek ho gaya ji"*, *"Achaa theek hai"*, *"Koi masla hi nahi ji"*.
+  * Assurances: *"Aap bilkul fikar na karein"*, *"Ji main abhi note kar leti hoon"*.
+* **Dialect Options**:
+  * **Pakistani Punjabi / Lahori Warmth**: Casual, hospitable, respectful.
+  * **Polite Corporate Urdu**: Professional, courteous business tone.
+  * **Urban Bilingual**: Natural code-switching between Urdu and standard English loanwords.
+
+### 2. Native Pakistani Voice Architecture
+| Voice Option | Engine | Accent / Profile | Role |
+| :--- | :--- | :--- | :--- |
+| **Aiza (عائزہ)** | Fish Audio (`cdd7d48d6038403199a3085b4e09547e`) | Soft, warm, conversational Lahori female | Direct studio preset + Voice cloning accent anchor |
+| **Uzma (عظمیٰ)** | Microsoft Neural (`ur-PK-UzmaNeural`) | Respectful, professional Lahori female | Clinic, hospital, and hospitality receptionist |
+| **Asad (اسد)** | Microsoft Neural (`ur-PK-AsadNeural`) | Crisp, confident Islamabad male | Orders, consultations, and corporate coordinator |
+| **Zero-Shot Clone** | Fish Audio (Aiza Anchored) | User's vocal timbre + Native Lahori phonetics | Personalized business owner voice with native accent |
+
+### 3. Pure Urdu Nastaliq Phonetic Normalizer (Zero American Accent)
+* **The Root Cause**: Foreign TTS engines switch to American English pronunciation when encountering Latin/English letters (e.g. `SmileCare`, `Zoya`, `Scaling`, `4000`).
+* **The Normalizer (`app/voice_service.py`)**:
+  * Transliterates 150+ business loanwords: `SmileCare` $\rightarrow$ `سمائل کیئر`, `Dental` $\rightarrow$ `ڈینٹل`, `Scaling` $\rightarrow$ `اسکیلنگ`, `Timing` $\rightarrow$ `ٹائمنگ`.
+  * Converts numerical digits into Urdu script words: `4000` $\rightarrow$ `چار ہزار روپے`, `1500` $\rightarrow$ `پندرہ سو روپے`.
+  * Rule-based phonetic digraph engine (`sh` $\rightarrow$ `ش`, `kh` $\rightarrow$ `خ`, `ch` $\rightarrow$ `چ`, `th` $\rightarrow$ `تھ`) ensures **zero Latin characters (`[A-Za-z]`) ever reach the speech synthesizer**.
+
+### 4. Dual-Reference Anchored Voice Cloning
+* Clones the user's recorded audio sample (10–30s) while anchoring the speech synthesis to the native Lahori **Aiza** model (`reference_id: cdd7d48d6038403199a3085b4e09547e`).
+* Extracts the speaker's **timbre, pitch, and vocal texture** from the user's sample, while forcing the **Urdu phonetics, vowel lengths, and intonation** to follow native Pakistani speech patterns.
+
+### 5. Multi-Turn Full-Duplex Voice with Foolproof Disconnect
+* **Continuous Interaction**: Every user voice turn receives a continuous audio reply without dropping back to text-only mode.
+* **Instant Disconnect**: Hard disconnect state machine aborts ongoing network fetches, clears speech recognition hooks, and closes hardware audio contexts immediately upon clicking **End Call**—guaranteeing **zero ghost speech**.
+* **Unified Live Chat Transcript**: Real-time user speech bubbles, agent response cards, audio replay buttons, and inline thermal receipts render directly inside the active chat window.
+
+### 6. Thermal Receipts & Vision OCR Inspector
+* **Physical Paper Receipts**: Generates 58mm thermal receipts with monospace layout, itemized line items, tax breakdown, and verification QR code.
+* **Multimodal OCR**: Powered by Groq Vision (`llama-3.2-11b-vision-preview`), extracting business names, phone numbers, items, prices, and tax totals from receipt scans.
+
+### 7. Modular Tools & Integrations Marketplace
+The platform provides 8 pluggable business tools accessible via `/api/demo/tools`:
+1. **Thermal Receipt Generator**: Itemized physical paper receipts.
+2. **Multimodal OCR Inspector**: Document and receipt data extraction.
+3. **Smart Appointment Booking**: Calendar sync (Google Calendar / Outlook) with conflict prevention.
+4. **Customer CRM & Lead Profiler**: Tracks caller history, sentiment, and lead urgency (Hot/Warm/Cold).
+5. **Kitchen Display System (KDS)**: Direct food order dispatch to kitchen preparation queues.
+6. **WhatsApp Auto-Dispatcher**: Instant WhatsApp confirmation with receipt PDFs and Google Maps pins.
+7. **Semantic Knowledge Base**: Vector lookup for clinic policies, menus, and parking info.
+8. **Supervisor Human Escalation**: Automatic call handoff to human managers for complex inquiries.
+
+---
+
+## Multi-Tier System Architecture
 
 ```
-WhatsApp Cloud API
-        │  webhook (GET verify / POST messages)
-        ▼
-┌───────────────┐   ┌────────────┐   ┌──────────────┐
-│ app/main.py   │──▶│ app/engine │──▶│ app/whatsapp │
-│ FastAPI +     │   │  routing,  │   │  Graph API   │
-│ dashboard     │   │  booking   │   │  send/recv   │
-└───────────────┘   │  dialogue  │   └──────────────┘
-        │           └────────────┘
-        ▼                  │  ┌─────────────┐  ┌──────────┐
-┌───────────────┐          ├──▶│ app/booking │  │ app/tts  │
-│ SQLite        │          │   │  NL parser  │  │ edge-tts │
-│ conversations │          │   │  + slots    │  └──────────┘
-│ messages      │          │   └─────────────┘
-│ bookings      │          ├──▶│ app/leads   │──▶ owner summary
-│ leads         │          │   │  extraction │
-│ transcript_   │          │   └─────────────┘
-│ cache         │          └──▶│ app/cache   │── TTS clips (disk, 50 MB cap)
-└───────────────┘              │ transcripts (SQLite, 500 rows) │
-                               └─────────────┘
-        ┌──────────────────────────────────────────────┐
-        │ businesses/*.json  — one file per client.    │
-        │ The engine reads ONLY these; no hardcoded    │
-        │ business data anywhere in the code.          │
-        └──────────────────────────────────────────────┘
+┌────────────────────────────────────────────────────────────────────────┐
+│                        CLIENT PRESENTATION LAYER                       │
+│                                                                        │
+│   Landing Page (/)          Login Console (/login)   Voice Studio (/demo)
+│   - Mid-Tone Executive UI   - 1-Click Demo Logins    - Wizard Setup Form
+│   - ROI Calculator          - Business Admin Presets - Live Web Audio API
+│   - Industry Bento Grid                              - Unified In-Chat Log
+└───────────────────────────────────┬────────────────────────────────────┘
+                                    │ HTTP / WebSocket Full-Duplex
+                                    ▼
+┌────────────────────────────────────────────────────────────────────────┐
+│                      FASTAPI CORE ENGINE (:8000)                       │
+│                                                                        │
+│   ┌───────────────────────────┐      ┌─────────────────────────────┐   │
+│   │ app/demo_routes.py        │      │ app/llm_service.py          │   │
+│   │ HTTP Endpoints & Live WS  │◄────►│ Groq Llama-3.3-70b / Qwen   │   │
+│   └─────────────┬─────────────┘      │ Bilingual Urdu Extraction   │   │
+│                 │                    └─────────────────────────────┘   │
+│                 ├──────────────────┐                │                  │
+│                 ▼                  ▼                ▼                  │
+│   ┌───────────────────────────┐  ┌─────────────────────────────┐       │
+│   │ app/voice_service.py      │  │ app/receipt_service.py      │       │
+│   │ - Phonetic Normalizer     │  │ - 58mm Monospace Thermal    │       │
+│   │ - Fish Audio Aiza Anchor  │  │ app/ocr_service.py          │       │
+│   │ - Edge-TTS (Uzma & Asad)  │  │ - Multimodal Vision OCR     │       │
+│   └───────────────────────────┘  └─────────────────────────────┘       │
+└───────────────────────────────────┬────────────────────────────────────┘
+                                    │
+                                    ▼
+┌────────────────────────────────────────────────────────────────────────┐
+│                      EXTERNAL CLOUD INTELLIGENCE                       │
+│                                                                        │
+│   - Groq Cloud (60ms TTFT, Whisper-Large-v3-Turbo, Llama Vision)       │
+│   - Fish Audio API (Aiza Lahori Model cdd7d48d6038403199a3085b4e09547e)│
+│   - Microsoft Neural Cloud (ur-PK-UzmaNeural, ur-PK-AsadNeural)        │
+└────────────────────────────────────────────────────────────────────────┘
 ```
 
-**Request flow (voice note in → voice note out):**
-1. `POST /webhook` → signature check → `parse_webhook_payload` (text/audio only).
-2. Audio → sha256 → transcript cache → Groq Whisper (hint `ur`) → text.
-3. `detect_language` → `ur` / `roman_urdu` / `en`.
-4. Booking intent? → `parse_appointment_request` → hours + conflict check →
-   pending → confirm dialogue (state machine in `conversations.pending_json`).
-   Otherwise → Groq chat with a system prompt built from the business config.
-5. Reply in the same language; voice note in → `edge-tts` voice reply
-   (cached by text+voice); text in → text reply.
-6. On booking confirmation the owner gets a WhatsApp notification.
+---
 
-## Setup (from scratch)
+## Quickstart & Installation
+
+### Prerequisites
+* Python 3.11+
+* FFmpeg (installed and added to system `PATH` for audio transcoding)
+* Free Groq Cloud API Key ([groq.com](https://console.groq.com))
+* (Optional) Fish Audio API Key ([fish.audio](https://fish.audio))
+
+### Installation Steps
 
 ```bash
-git clone <repo> && cd voice-receptionist
-python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
-cp .env.example .env   # then fill in your keys (see below)
-.venv/bin/uvicorn app.main:app --reload
-# dashboard: http://localhost:8000
+# 1. Clone the repository
+git clone https://github.com/IBRAHIMHAMID678/urdu-voice-receptionist.git
+cd urdu-voice-receptionist
+
+# 2. Create virtual environment & activate
+python -m venv .venv
+# On Windows:
+.\.venv\Scripts\Activate.ps1
+# On Linux/macOS:
+source .venv/bin/activate
+
+# 3. Install dependencies
+pip install -r requirements.txt
+pip install playwright ormsgpack
+
+# 4. Configure environment (.env)
+cp .env.example .env
 ```
 
-### Environment variables (`.env`)
+Edit `.env` with your keys:
+```env
+GROQ_API_KEY=gsk_your_groq_api_key_here
+GROQ_MODEL=qwen/qwen3.8-27b
+FISH_AUDIO_API_KEY=sk-fish-your_fish_audio_key_here
+OPENROUTER_API_KEY=your_optional_openrouter_key
+```
 
-| Variable | Required | Purpose |
-|---|---|---|
-| `GROQ_API_KEY` | yes (for AI) | Groq API key — Whisper + chat |
-| `WHATSAPP_TOKEN` | yes (for WhatsApp) | Meta Cloud API token |
-| `WHATSAPP_PHONE_NUMBER_ID` | yes (for WhatsApp) | Phone number ID from Meta dashboard |
-| `WHATSAPP_VERIFY_TOKEN` | yes (for webhook) | Must match the token you set in Meta's webhook config |
-| `WHATSAPP_APP_SECRET` | recommended | Enables `X-Hub-Signature-256` verification on `POST /webhook` |
-| `WHATSAPP_API_VERSION` | no | Default `v21.0` |
-
-Secrets are read from the environment at runtime only — never written to
-files, logs, or the database.
-
-## Adding a client (no code)
-
-**Option A — dashboard (for non-technical owners):** open
-`http://localhost:8000/settings?business=new`, fill the form (details,
-services, hours, FAQs, booking rules), Save. The config validates and goes
-live immediately.
-
-**Option B — JSON file:** copy `businesses/smilecare-dental.json` to
-`businesses/<id>.json`, edit, restart. `app/config.py` validates every
-field and reports exactly what's wrong (e.g. `hours missing weekday 'sun'`).
-
-Config fields: `id, name, city, default_language (ur|roman_urdu|en)`,
-`services[] {name, price_pkr, duration_min, keywords[]}`,
-`hours {mon..sun: {open,close} | "closed"}`, `location`, `faqs[]`,
-`booking {slot_minutes, max_advance_days, require_name_phone}`,
-`after_hours_message`, `owner_phone`, `tts_voice
-(ur-PK-GulNawazNeural|ur-PK-AsadNeural)`, optional
-`whatsapp_phone_number_id` (routes webhooks to the right business when one
-server serves several numbers).
-
-## Running
+### Running the Application
 
 ```bash
-.venv/bin/uvicorn app.main:app --reload   # dashboard at localhost:8000
+uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
-Dashboard pages: **Conversations** (list + full transcripts), **Bookings**
-(week calendar + upcoming, confirm/cancel), **Leads** (inbox with status),
-**Analytics** (cards + bookings-per-day chart + cache stats),
-**Settings** (client editor). Owner daily summary (WhatsApp-ready text) is
-on the Bookings page with a copy button, and at
-`/api/daily-summary?business=<id>&date=YYYY-MM-DD`.
+Open your browser:
+* **Landing Page**: `http://localhost:8000/`
+* **Voice Studio & Live Phone Simulator**: `http://localhost:8000/demo`
+* **Business Admin Login**: `http://localhost:8000/login`
+* **Legacy WhatsApp Console**: `http://localhost:8000/app`
 
-## Tests & demo
+---
+
+## Running the Automated Test Suite
+
+The platform includes 11 end-to-end integration and unit test suites:
 
 ```bash
-.venv/bin/python -m pytest tests/ -q
+pytest tests/test_live_demo.py -v
 ```
 
-- Unit suite: **85 tests, all mocked — zero network calls.**
-- `tests/test_smoke_groq.py`: 3 real-API checks (one STT, one chat, one TTS)
-  that **skip cleanly** unless `GROQ_API_KEY` is set. Run explicitly:
-  `GROQ_API_KEY=... pytest tests/test_smoke_groq.py -v`.
-- `tests/test_hostile.py`: garbage payloads, bad signatures, dead keys,
-  corrupt audio, broken configs — all must degrade gracefully.
+**Verification Results:**
+```
+tests/test_live_demo.py::test_demo_page_loads PASSED                     [  9%]
+tests/test_live_demo.py::test_demo_create_session_with_custom_agent_and_fallback PASSED [ 18%]
+tests/test_live_demo.py::test_fallback_mechanism_unknown_query PASSED    [ 27%]
+tests/test_live_demo.py::test_multi_turn_continuous_voice_chat PASSED    [ 36%]
+tests/test_live_demo.py::test_physical_receipt_generation_endpoints PASSED [ 45%]
+tests/test_live_demo.py::test_ocr_receipt_inspector_endpoint PASSED      [ 54%]
+tests/test_live_demo.py::test_websocket_multi_turn_call PASSED           [ 63%]
+tests/test_live_demo.py::test_landing_page_loads PASSED                  [ 72%]
+tests/test_live_demo.py::test_login_page_loads PASSED                    [ 81%]
+tests/test_live_demo.py::test_tools_catalog_and_simulation_endpoints PASSED [ 90%]
+tests/test_live_demo.py::test_aiza_fish_voice_session PASSED             [100%]
 
-```bash
-.venv/bin/python demo.py          # mock mode (default): ZERO api calls
-.venv/bin/python demo.py --live   # real Groq + edge-tts (needs GROQ_API_KEY)
+================== 11 passed in 91.12s ===================
 ```
 
-The demo runs a full Roman-Urdu patient-booking conversation (text +
-simulated voice note) against the dental-clinic config and prints the
-annotated transcript, final DB state, and the owner summary.
+---
 
-## Free-tier frugality
+## API Endpoints Reference
 
-Groq's free tier is rate-limited, so the system is designed to sip:
+| Method | Endpoint | Description |
+| :--- | :--- | :--- |
+| `GET` | `/` | Executive SaaS marketing landing page with ROI calculator. |
+| `GET` | `/login` | Business admin login with 1-click instant demo presets. |
+| `GET` | `/demo` | Live Voice Studio, phone simulator & tools console. |
+| `POST` | `/api/demo/session` | Initializes an agent session with custom name, business details, voice model, and fallback. |
+| `POST` | `/api/demo/chat` | Turn-based voice/text chat returning text, synthesized MP3, and inline receipt. |
+| `WS` | `/ws/live-call/{session_id}` | Full-duplex WebSocket stream for live phone calls. |
+| `GET` | `/api/demo/tools` | Fetches catalog of 8 modular business tools with connection states. |
+| `POST` | `/api/demo/tools/toggle` | Toggles tool connection state (e.g. enable/disable KDS or WhatsApp). |
+| `POST` | `/api/demo/tools/simulate` | Executes realistic interactive simulations of business tools. |
+| `POST` | `/api/demo/receipt/generate` | Generates a 58mm thermal receipt PNG from custom line items. |
+| `POST` | `/api/demo/receipt/ocr` | Multimodal Vision OCR inspection of uploaded receipt images. |
 
-| Call | When it happens | Cached? |
-|---|---|---|
-| Whisper transcription | once per *unique* voice note | **yes** — sha256(audio) in SQLite (500-row cap) |
-| LLM chat | once per free-chat message (booking flow uses templates, not the LLM) | no — but booking/confirm/cancel/FAQ-flow messages never call it |
-| edge-tts synthesis | once per *unique* (text, voice) reply | **yes** — MP3s on disk, 50 MB cap, LRU eviction |
-| Lead-extraction LLM | only when regex finds no phone AND the message looks like contact info (40+ chars + number/phone/name hints) | n/a (rare) |
+---
 
-Per conversation, the expected Groq usage is: **0–1 transcriptions**
-(voice notes only), **0–2 chat turns** (free chat only). Everything
-repetitive — greetings, confirmations, FAQ-style replies — is templated or
-cache-served.
+## License
 
-**Rate-limit policy:** on HTTP 429 the client raises `GroqRateLimited`
-immediately and tries **no** fallback models and **no** retries. The engine
-degrades to a polite templated reply ("system busy, we'll call you back")
-and logs the event. Transient errors (timeouts, 5xx) get up to 3 attempts
-with exponential backoff. Never hammer the free tier.
-
-## Connecting WhatsApp
-
-See [docs/whatsapp-setup.md](docs/whatsapp-setup.md) — the exact 15-minute,
-non-technical walkthrough: Meta app → WhatsApp product → add your number →
-permanent token → webhook URL + verify token → subscribe to `messages` →
-test. **Use a spare number**, not your personal WhatsApp line.
-
-## Deliberately deferred
-
-- **Meta/Facebook registration & phone verification** — must be done by the
-  business owner in Meta's dashboard (see guide above); not automatable.
-- **Real client onboarding** — configs are ready; production hosting
-  (public HTTPS URL for the webhook) is the deployer's job.
-- **Payment/billing** — no subscription logic; price it as a flat monthly
-  service.
-- **Multi-agent voice calls** — WhatsApp text/voice notes only; no phone-call
-  support.
+This project is licensed under the MIT License — see the [LICENSE](LICENSE) file for details.
